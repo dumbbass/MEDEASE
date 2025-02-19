@@ -1,0 +1,261 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .register-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .register-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        color: #4a5568;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    .form-control {
+        border-radius: 10px;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .user-type-selector {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .user-type-option {
+        flex: 1;
+        text-align: center;
+        padding: 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .user-type-option.active {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+    }
+
+    .user-type-option i {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #667eea;
+    }
+
+    .doctor-fields {
+        display: none;
+        padding: 20px;
+        background: #f7fafc;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .doctor-fields.show {
+        display: block;
+    }
+
+    .register-btn {
+        width: 100%;
+        padding: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .register-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        color: #4a5568;
+    }
+
+    .login-link a {
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+
+    .error-message {
+        color: #e53e3e;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="register-container">
+    <div class="container">
+        <div class="register-card">
+            <h2 class="text-center mb-4">Create Account</h2>
+            
+            <form method="POST" id="registerForm">
+                {% csrf_token %}
+                
+                <div class="user-type-selector">
+                    <div class="user-type-option active" data-type="PATIENT">
+                        <i class="fas fa-user"></i>
+                        <h4>Patient</h4>
+                        <p class="text-muted">I want to book appointments</p>
+                    </div>
+                    <div class="user-type-option" data-type="DOCTOR">
+                        <i class="fas fa-user-md"></i>
+                        <h4>Doctor</h4>
+                        <p class="text-muted">I want to manage patients</p>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="user_type" id="userType" value="PATIENT">
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="full_name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password1" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" name="password2" class="form-control" required>
+                </div>
+
+                <!-- Doctor-specific fields -->
+                <div class="doctor-fields">
+                    <div class="form-group">
+                        <label class="form-label">Specialization</label>
+                        <input type="text" name="specialization" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Years of Experience</label>
+                        <input type="number" name="experience" class="form-control" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Qualifications</label>
+                        <input type="text" name="qualification" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Consultation Fee</label>
+                        <input type="number" name="consultation_fee" class="form-control" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Available Days</label>
+                        <input type="text" name="available_days" class="form-control" 
+                               placeholder="e.g., Monday-Friday">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Available Time</label>
+                        <input type="text" name="available_time" class="form-control" 
+                               placeholder="e.g., 9:00 AM - 5:00 PM">
+                    </div>
+                </div>
+
+                {% if error_message %}
+                    <div class="error-message mb-3">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+
+                <button type="submit" class="register-btn">Create Account</button>
+            </form>
+
+            <div class="login-link">
+                Already have an account? <a href="{% url 'login' %}">Login here</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.user-type-option').forEach(option => {
+    option.addEventListener('click', function() {
+        // Update active state
+        document.querySelectorAll('.user-type-option').forEach(opt => {
+            opt.classList.remove('active');
+        });
+        this.classList.add('active');
+
+        // Update hidden input
+        const userType = this.dataset.type;
+        document.getElementById('userType').value = userType;
+
+        // Toggle doctor fields
+        const doctorFields = document.querySelector('.doctor-fields');
+        if (userType === 'DOCTOR') {
+            doctorFields.classList.add('show');
+            // Make doctor fields required
+            doctorFields.querySelectorAll('input').forEach(input => {
+                input.required = true;
+            });
+        } else {
+            doctorFields.classList.remove('show');
+            // Remove required from doctor fields
+            doctorFields.querySelectorAll('input').forEach(input => {
+                input.required = false;
+            });
+        }
+    });
+});
+
+// Form validation
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    const password1 = this.querySelector('input[name="password1"]').value;
+    const password2 = this.querySelector('input[name="password2"]').value;
+
+    if (password1 !== password2) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+    }
+});
+</script>
+{% endblock %} 

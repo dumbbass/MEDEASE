@@ -1,0 +1,236 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .prescriptions-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .prescriptions-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .prescription-item {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+
+    .prescription-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .prescription-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .prescription-date {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .prescription-doctor {
+        font-weight: 500;
+        color: #2d3748;
+    }
+
+    .medication-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .medication-item {
+        padding: 10px 15px;
+        background: #f7fafc;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .medication-name {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 5px;
+    }
+
+    .medication-details {
+        color: #4a5568;
+        font-size: 0.9rem;
+    }
+
+    .prescription-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .action-btn {
+        padding: 8px 15px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-download {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .btn-view {
+        background: #edf2f7;
+        color: #4a5568;
+    }
+
+    .btn-view:hover {
+        background: #e2e8f0;
+        transform: translateY(-2px);
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .no-prescriptions {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+
+    .no-prescriptions i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #a0aec0;
+    }
+</style>
+
+<div class="prescriptions-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="prescriptions-card">
+                    <h2 class="section-title">My Prescriptions</h2>
+
+                    <!-- Replace the sample prescriptions section with this -->
+                    {% if prescriptions %}
+                        {% for prescription in prescriptions %}
+                            <div class="prescription-item">
+                                <div class="prescription-header">
+                                    <div>
+                                        <div class="prescription-doctor">Dr. {{ prescription.doctor.user_profile.full_name }}</div>
+                                        <div class="prescription-date">Prescribed on {{ prescription.prescribed_date|date:"F j, Y" }}</div>
+                                    </div>
+                                    <div class="prescription-status {% if prescription.status == 'ACTIVE' %}status-active{% elif prescription.status == 'COMPLETED' %}status-completed{% else %}status-cancelled{% endif %}">
+                                        {{ prescription.status }}
+                                    </div>
+                                </div>
+                                
+                                <ul class="medication-list">
+                                    {% for medication in prescription.medications.all %}
+                                        <li class="medication-item">
+                                            <div class="medication-name">{{ medication.name }}</div>
+                                            <div class="medication-details">{{ medication.dosage }}, {{ medication.frequency }}</div>
+                                            <div class="medication-details">{{ medication.instructions }}</div>
+                                            {% if medication.duration %}
+                                                <div class="medication-details">Duration: {{ medication.duration }}</div>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+
+                                <div class="prescription-actions">
+                                    <button class="action-btn btn-download" onclick="downloadPrescription({{ prescription.id }})">
+                                        <i class="fas fa-download"></i> Download PDF
+                                    </button>
+                                    <a href="{% url 'view_prescription' prescription.id %}" class="action-btn btn-view">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-prescriptions">
+                            <i class="fas fa-prescription"></i>
+                            <h4>No Prescriptions</h4>
+                            <p>You don't have any prescriptions yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadPrescription(prescriptionId) {
+    fetch(`/prescriptions/download/${prescriptionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Handle successful download
+                window.location.href = data.download_url;
+            } else {
+                alert(data.message || 'Error downloading prescription');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error downloading prescription');
+        });
+}
+</script>
+{% endblock %} 

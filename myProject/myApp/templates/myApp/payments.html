@@ -1,0 +1,226 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .payments-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .payments-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .payment-item {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .payment-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .payment-info {
+        flex-grow: 1;
+    }
+
+    .payment-amount {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #2d3748;
+    }
+
+    .payment-date {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .payment-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-paid {
+        background: #c6f6d5;
+        color: #2f855a;
+    }
+
+    .status-pending {
+        background: #feebc8;
+        color: #9c4221;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .payment-method {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .payment-method-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf2f7;
+        border-radius: 10px;
+    }
+
+    .payment-method-icon i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+
+    .add-payment-btn {
+        background: #667eea;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .add-payment-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .no-payments {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+
+    .no-payments i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #a0aec0;
+    }
+</style>
+
+<div class="payments-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="payments-card">
+                    <h2 class="section-title">Payment Methods</h2>
+                    <div class="payment-method">
+                        <div class="payment-method-icon">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div class="payment-info">
+                            <h4>Credit Card</h4>
+                            <p class="text-muted">**** **** **** 1234</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger">Remove</button>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <button class="add-payment-btn">
+                            <i class="fas fa-plus"></i> Add Payment Method
+                        </button>
+                    </div>
+
+                    <h2 class="section-title">Payment History</h2>
+                    
+                    <div class="payment-item">
+                        <div class="payment-info">
+                            <div class="payment-amount">$100.00</div>
+                            <div class="payment-description">Consultation with Dr. John Smith</div>
+                            <div class="payment-date">Feb 15, 2025</div>
+                        </div>
+                        <span class="payment-status status-paid">Paid</span>
+                    </div>
+
+                    <div class="payment-item">
+                        <div class="payment-info">
+                            <div class="payment-amount">$75.00</div>
+                            <div class="payment-description">Follow-up Appointment</div>
+                            <div class="payment-date">Feb 10, 2025</div>
+                        </div>
+                        <span class="payment-status status-pending">Pending</span>
+                    </div>
+
+                    <!-- If no payments -->
+                    <!-- <div class="no-payments">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <h4>No Payment History</h4>
+                        <p>You haven't made any payments yet.</p>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelector('.add-payment-btn').addEventListener('click', function() {
+    alert('Payment method addition functionality will be implemented soon!');
+});
+
+document.querySelector('.btn-outline-danger').addEventListener('click', function() {
+    if (confirm('Are you sure you want to remove this payment method?')) {
+        alert('Payment method removal functionality will be implemented soon!');
+    }
+});
+</script>
+{% endblock %} 

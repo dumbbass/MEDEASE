@@ -1,0 +1,147 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .appointment-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .appointment-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .appointment-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+
+    .status-confirmed { background: #c6f6d5; color: #2f855a; }
+    .status-pending { background: #feebc8; color: #9c4221; }
+    .status-cancelled { background: #fed7d7; color: #c53030; }
+    .status-completed { background: #e6fffa; color: #2c7a7b; }
+
+    .appointment-details {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+
+    .detail-item {
+        margin-bottom: 20px;
+    }
+
+    .detail-label {
+        color: #4a5568;
+        font-weight: 500;
+        margin-bottom: 5px;
+    }
+
+    .detail-value {
+        color: #2d3748;
+        font-size: 1.1rem;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+</style>
+
+<div class="appointment-container">
+    <div class="container">
+        <a href="{% url 'notifications' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Notifications
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="appointment-card">
+                    <div class="appointment-header">
+                        <h2>Appointment Details</h2>
+                        <span class="status-badge status-{{ appointment.status|lower }}">
+                            {{ appointment.status }}
+                        </span>
+                    </div>
+
+                    <div class="appointment-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Doctor</div>
+                            <div class="detail-value">Dr. {{ appointment.doctor.user_profile.full_name }}</div>
+                        </div>
+
+                        <div class="detail-item">
+                            <div class="detail-label">Specialization</div>
+                            <div class="detail-value">{{ appointment.doctor.specialization }}</div>
+                        </div>
+
+                        <div class="detail-item">
+                            <div class="detail-label">Date & Time</div>
+                            <div class="detail-value">
+                                {{ appointment.appointment_date|date:"F j, Y" }} at {{ appointment.appointment_time }}
+                            </div>
+                        </div>
+
+                        <div class="detail-item">
+                            <div class="detail-label">Reason for Visit</div>
+                            <div class="detail-value">{{ appointment.reason }}</div>
+                        </div>
+
+                        <div class="detail-item">
+                            <div class="detail-label">Consultation Fee</div>
+                            <div class="detail-value">${{ appointment.doctor.consultation_fee }}</div>
+                        </div>
+
+                        {% if appointment.status == 'PENDING' %}
+                            <div class="text-center mt-4">
+                                <form method="POST" action="{% url 'cancel_appointment' appointment.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this appointment?')">
+                                        <i class="fas fa-times"></i> Cancel Appointment
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

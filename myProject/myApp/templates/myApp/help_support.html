@@ -1,0 +1,229 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .help-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .help-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .faq-section {
+        margin-bottom: 30px;
+    }
+
+    .faq-item {
+        background: white;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .faq-question {
+        padding: 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+        color: #2d3748;
+        transition: all 0.3s ease;
+    }
+
+    .faq-question:hover {
+        background: #f7fafc;
+    }
+
+    .faq-answer {
+        padding: 0 20px;
+        max-height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        color: #4a5568;
+    }
+
+    .faq-item.active .faq-answer {
+        padding: 20px;
+        max-height: 500px;
+        border-top: 1px solid #edf2f7;
+    }
+
+    .contact-section {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+    }
+
+    .contact-methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .contact-method {
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid #edf2f7;
+    }
+
+    .contact-method:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+
+    .contact-method i {
+        font-size: 2rem;
+        color: #667eea;
+        margin-bottom: 15px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+</style>
+
+<div class="help-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="help-card">
+                    <h2 class="text-center mb-4">Help & Support</h2>
+
+                    <div class="faq-section">
+                        <h3 class="section-title">Frequently Asked Questions</h3>
+                        
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span>How do I book an appointment?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                You can book an appointment by clicking the "Book Appointment" card on your dashboard or using the Find Doctor feature to select a specific doctor. Choose your preferred date and time, and confirm your booking.
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span>How can I cancel my appointment?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                To cancel an appointment, go to your dashboard and find the appointment in the "Upcoming Appointments" section. Click the "Cancel" button and confirm your decision. Please note that some cancellations may be subject to our cancellation policy.
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span>How do I update my profile information?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                You can update your profile information by clicking on "Profile & Settings" in the side menu. Here you can edit your personal information, medical history, and emergency contacts.
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span>What should I do if I need emergency medical care?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                For medical emergencies, please call emergency services (911) immediately. This platform is not intended for emergency medical situations and should not be used in life-threatening circumstances.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-section">
+                        <h3 class="section-title">Contact Support</h3>
+                        <p class="text-center mb-4">Need more help? Contact us through any of these methods:</p>
+                        
+                        <div class="contact-methods">
+                            <div class="contact-method">
+                                <i class="fas fa-phone-alt"></i>
+                                <h4>Phone Support</h4>
+                                <p>1-800-123-4567</p>
+                                <small>Available 24/7</small>
+                            </div>
+
+                            <div class="contact-method">
+                                <i class="fas fa-envelope"></i>
+                                <h4>Email Support</h4>
+                                <p>support@healthcare.com</p>
+                                <small>Response within 24 hours</small>
+                            </div>
+
+                            <div class="contact-method">
+                                <i class="fas fa-comments"></i>
+                                <h4>Live Chat</h4>
+                                <p>Chat with us</p>
+                                <small>Available 9 AM - 5 PM</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFAQ(element) {
+    const faqItem = element.parentElement;
+    const isActive = faqItem.classList.contains('active');
+    
+    // Close all FAQ items
+    document.querySelectorAll('.faq-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Open clicked item if it wasn't active
+    if (!isActive) {
+        faqItem.classList.add('active');
+    }
+}
+</script>
+{% endblock %} 

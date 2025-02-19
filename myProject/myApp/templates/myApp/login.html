@@ -1,0 +1,340 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: #f0f2f5;
+    }
+
+    .login-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 450px;
+        margin: 0 auto;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        position: relative;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-header {
+        background: transparent;
+        padding: 40px 40px 20px;
+        border: none;
+        text-align: center;
+        animation: slideInFromLeft 0.8s ease-out;
+    }
+
+    .card-header h3 {
+        color: #2d3748;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        animation: slideInFromLeft 0.8s ease-out 0.2s backwards;
+    }
+
+    .card-header p {
+        color: #718096;
+        font-size: 16px;
+        margin-bottom: 0;
+        animation: slideInFromLeft 0.8s ease-out 0.4s backwards;
+    }
+
+    .card-body {
+        padding: 40px;
+    }
+
+    .form-floating {
+        margin-bottom: 24px;
+        position: relative;
+        animation: slideInFromLeft 0.8s ease-out 0.6s backwards;
+    }
+
+    .form-control {
+        height: 60px;
+        padding: 12px 20px 12px 50px !important;
+        font-size: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        background-color: #f8fafc;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        background-color: #fff;
+        transform: translateY(-2px);
+    }
+
+    .form-floating label {
+        padding: 1rem 3rem !important;
+        height: auto;
+        color: #718096;
+        font-size: 15px;
+        transform: translateY(-0.5rem) !important;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        opacity: .65;
+        transform: scale(.85) translateY(-0.75rem) translateX(0.15rem) !important;
+    }
+
+    .form-floating i {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+        font-size: 20px;
+        z-index: 2;
+        transition: transform 0.3s ease;
+    }
+
+    .form-floating input:focus ~ i {
+        color: #667eea;
+    }
+
+    .btn-primary {
+        width: 100%;
+        height: 56px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 16px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        margin-top: 10px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        animation: pulse 2s infinite;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        animation: none;
+    }
+
+    .btn-primary span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .text-center {
+        margin-top: 30px;
+    }
+
+    .text-center a {
+        color: #667eea;
+        font-weight: 600;
+        text-decoration: none;
+        position: relative;
+    }
+
+    .text-center a:after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background: #667eea;
+        transition: width 0.3s ease;
+    }
+
+    .text-center a:hover:after {
+        width: 100%;
+    }
+
+    .social-proof {
+        margin-top: 24px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        animation: fadeInUp 0.8s ease-out 1s backwards;
+    }
+
+    .social-proof p {
+        color: white;
+        margin: 0;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .alert-danger {
+        background: rgba(255, 82, 82, 0.1);
+        border: 1px solid rgba(255, 82, 82, 0.2);
+        color: #ff5252;
+        padding: 16px;
+        margin-bottom: 24px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Floating background elements */
+    .bg-bubble {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        animation: float 20s infinite;
+        pointer-events: none;
+    }
+
+    .bg-bubble:nth-child(1) {
+        width: 100px;
+        height: 100px;
+        left: 10%;
+        top: 20%;
+    }
+
+    .bg-bubble:nth-child(2) {
+        width: 150px;
+        height: 150px;
+        right: 15%;
+        top: 40%;
+        animation-delay: -5s;
+    }
+
+    .bg-bubble:nth-child(3) {
+        width: 80px;
+        height: 80px;
+        left: 20%;
+        bottom: 20%;
+        animation-delay: -10s;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-20px) rotate(180deg);
+        }
+    }
+
+    /* Icon hover effect */
+    .form-floating:hover i {
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    /* Add these new animation styles */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideInFromLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+
+<div class="login-container">
+    <div class="bg-bubble"></div>
+    <div class="bg-bubble"></div>
+    <div class="bg-bubble"></div>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h3>Welcome Back!</h3>
+                <p>Please login to your account</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    {% if error_message %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>{{ error_message }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="form-floating">
+                        <i class="fas fa-user"></i>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                        <label for="username">Username</label>
+                    </div>
+                    
+                    <div class="form-floating">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                        <label for="password">Password</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <span>
+                            Login
+                            <i class="fas fa-arrow-right"></i>
+                        </span>
+                    </button>
+                </form>
+                
+                <div class="text-center">
+                    <p class="mb-0">Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="social-proof">
+            <p>
+                <i class="fas fa-shield-alt"></i>
+                <span>Secure, encrypted login</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %} 

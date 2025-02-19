@@ -1,0 +1,232 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .history-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .history-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .appointment-item {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+
+    .appointment-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .appointment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .doctor-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .doctor-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .doctor-name {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 5px;
+    }
+
+    .appointment-date {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .appointment-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-completed {
+        background: #c6f6d5;
+        color: #2f855a;
+    }
+
+    .status-cancelled {
+        background: #fed7d7;
+        color: #c53030;
+    }
+
+    .appointment-details {
+        color: #4a5568;
+        font-size: 0.95rem;
+        margin-bottom: 15px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .no-history {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+
+    .no-history i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #a0aec0;
+    }
+
+    .filter-section {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .filter-btn {
+        padding: 8px 15px;
+        border-radius: 8px;
+        background: white;
+        border: 2px solid #edf2f7;
+        color: #4a5568;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+</style>
+
+<div class="history-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="history-card">
+                    <h2 class="section-title">Medical History</h2>
+
+                    <div class="filter-section">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="completed">Completed</button>
+                        <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+                    </div>
+
+                    {% if appointments %}
+                        {% for appointment in appointments %}
+                            <div class="appointment-item" data-status="{{ appointment.status|lower }}">
+                                <div class="appointment-header">
+                                    <div class="doctor-info">
+                                        {% if appointment.doctor.user_profile.profile_image %}
+                                            <img src="{{ appointment.doctor.user_profile.profile_image.url }}" alt="Doctor" class="doctor-avatar">
+                                        {% else %}
+                                            <img src="https://via.placeholder.com/50" alt="Doctor" class="doctor-avatar">
+                                        {% endif %}
+                                        <div>
+                                            <div class="doctor-name">Dr. {{ appointment.doctor.user_profile.full_name }}</div>
+                                            <div class="appointment-date">{{ appointment.appointment_date|date:"F j, Y" }} at {{ appointment.appointment_time }}</div>
+                                        </div>
+                                    </div>
+                                    <span class="appointment-status status-{{ appointment.status|lower }}">
+                                        {{ appointment.status }}
+                                    </span>
+                                </div>
+                                <div class="appointment-details">
+                                    <strong>Reason for Visit:</strong> {{ appointment.reason }}
+                                </div>
+                                <div class="appointment-details">
+                                    <strong>Specialization:</strong> {{ appointment.doctor.specialization }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-history">
+                            <i class="fas fa-history"></i>
+                            <h4>No Past Appointments</h4>
+                            <p>Your medical history will appear here.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter functionality
+document.querySelectorAll('.filter-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        // Update active button
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+
+        const filter = this.dataset.filter;
+        const appointments = document.querySelectorAll('.appointment-item');
+
+        appointments.forEach(appointment => {
+            if (filter === 'all' || appointment.dataset.status === filter) {
+                appointment.style.display = 'block';
+            } else {
+                appointment.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

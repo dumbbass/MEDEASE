@@ -1,0 +1,399 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
+    <div id="saveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check-circle me-2"></i>
+                <span id="toastMessage"></span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .settings-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .settings-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .profile-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .profile-image-container {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 20px;
+    }
+
+    .profile-image {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #667eea;
+    }
+
+    .image-upload-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: #667eea;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .image-upload-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .settings-section {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #4a5568;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.25);
+    }
+
+    .save-btn {
+        background: #667eea;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .save-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .toast {
+        background-color: rgba(0, 0, 0, 0.85);
+    }
+
+    .toast.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .toast.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .toast-body {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+</style>
+
+<div class="settings-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="settings-card">
+                    <div class="profile-header">
+                        <div class="profile-image-container">
+                            {% if user_profile.profile_image %}
+                                <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="profile-image">
+                            {% else %}
+                                <img src="https://via.placeholder.com/150" alt="Profile" class="profile-image">
+                            {% endif %}
+                            <label for="profile-image-upload" class="image-upload-btn">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" id="profile-image-upload" style="display: none;" accept="image/*">
+                        </div>
+                        <h2>{{ user_profile.full_name }}</h2>
+                        <p class="text-muted">Patient ID: {{ user_profile.id }}</p>
+                    </div>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="settings-section">
+                            <h3 class="section-title">Personal Information</h3>
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="full_name" class="form-control" 
+                                       value="{{ user_profile.full_name }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" 
+                                       value="{{ user_profile.user.email }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" name="phone" class="form-control" 
+                                       value="{{ user_profile.phone }}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Address</label>
+                                <textarea name="address" class="form-control" 
+                                          rows="3">{{ user_profile.address }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3 class="section-title">Medical Information</h3>
+                            <div class="form-group">
+                                <label class="form-label">Blood Type</label>
+                                <select name="blood_type" class="form-control">
+                                    <option value="" {% if not user_profile.blood_type %}selected{% endif %}>Select Blood Type</option>
+                                    <option value="A+" {% if user_profile.blood_type == 'A+' %}selected{% endif %}>A+</option>
+                                    <option value="A-" {% if user_profile.blood_type == 'A-' %}selected{% endif %}>A-</option>
+                                    <option value="B+" {% if user_profile.blood_type == 'B+' %}selected{% endif %}>B+</option>
+                                    <option value="B-" {% if user_profile.blood_type == 'B-' %}selected{% endif %}>B-</option>
+                                    <option value="AB+" {% if user_profile.blood_type == 'AB+' %}selected{% endif %}>AB+</option>
+                                    <option value="AB-" {% if user_profile.blood_type == 'AB-' %}selected{% endif %}>AB-</option>
+                                    <option value="O+" {% if user_profile.blood_type == 'O+' %}selected{% endif %}>O+</option>
+                                    <option value="O-" {% if user_profile.blood_type == 'O-' %}selected{% endif %}>O-</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Allergies</label>
+                                <textarea name="allergies" class="form-control" 
+                                          rows="3" placeholder="List any allergies...">{{ user_profile.allergies }}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Medical Conditions</label>
+                                <textarea name="medical_conditions" class="form-control" 
+                                          rows="3" placeholder="List any medical conditions...">{{ user_profile.medical_conditions }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3 class="section-title">Emergency Contact</h3>
+                            <div class="form-group">
+                                <label class="form-label">Emergency Contact Name</label>
+                                <input type="text" name="emergency_contact_name" class="form-control" 
+                                       value="{{ user_profile.emergency_contact_name }}" 
+                                       placeholder="Name of emergency contact">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Emergency Contact Phone</label>
+                                <input type="tel" name="emergency_contact_phone" class="form-control" 
+                                       value="{{ user_profile.emergency_contact_phone }}"
+                                       placeholder="Phone number of emergency contact">
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button type="submit" class="save-btn">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('profile-image-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch('{% url "upload_profile_image" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.querySelector('.profile-image').src = data.image_url;
+                // Add toast notification for successful upload
+                const toast = document.getElementById('saveToast');
+                const toastMessage = document.getElementById('toastMessage');
+                toast.classList.add('bg-success');
+                toast.classList.remove('bg-danger');
+                toastMessage.textContent = 'Profile image updated successfully!';
+                const bsToast = new bootstrap.Toast(toast, {
+                    autohide: true,
+                    delay: 3000
+                });
+                bsToast.show();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Show error toast
+            const toast = document.getElementById('saveToast');
+            const toastMessage = document.getElementById('toastMessage');
+            toast.classList.add('bg-danger');
+            toast.classList.remove('bg-success');
+            toastMessage.textContent = 'Error uploading profile image.';
+            const bsToast = new bootstrap.Toast(toast, {
+                autohide: true,
+                delay: 3000
+            });
+            bsToast.show();
+        });
+    }
+});
+
+// Initialize all toasts
+window.addEventListener('DOMContentLoaded', (event) => {
+    var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+    var toastList = toastElList.map(function(toastEl) {
+        return new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+        });
+    });
+    
+    // Show all toasts
+    toastList.forEach(toast => toast.show());
+});
+
+// Form submission handling with fetch
+document.querySelector('form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    try {
+        const formData = new FormData(this);
+        const response = await fetch('{% url "profile_settings" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        
+        const data = await response.json();
+        
+        // Create toast
+        const toast = document.getElementById('saveToast');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        if (data.status === 'success') {
+            toast.classList.add('bg-success');
+            toast.classList.remove('bg-danger');
+        } else {
+            toast.classList.add('bg-danger');
+            toast.classList.remove('bg-success');
+        }
+        
+        toastMessage.textContent = data.message;
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
+        bsToast.show();
+        
+        if (data.status === 'success') {
+            // Optionally refresh the page after successful update
+            setTimeout(() => window.location.reload(), 1500);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        // Show error toast
+        const toast = document.getElementById('saveToast');
+        const toastMessage = document.getElementById('toastMessage');
+        toast.classList.add('bg-danger');
+        toast.classList.remove('bg-success');
+        toastMessage.textContent = 'An error occurred while saving changes.';
+        
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
+        bsToast.show();
+    }
+});
+</script>
+{% endblock %} 

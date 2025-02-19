@@ -1,0 +1,223 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .find-doctor-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .search-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+        margin-bottom: 30px;
+    }
+
+    .search-box {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 15px 20px 15px 50px;
+        border: 2px solid #e2e8f0;
+        border-radius: 15px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+    }
+
+    .search-box input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.25);
+    }
+
+    .doctor-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+
+    .doctor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .doctor-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .doctor-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin-right: 15px;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+
+    .doctor-info h3 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 1.2rem;
+    }
+
+    .doctor-info p {
+        margin: 5px 0 0;
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .doctor-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+    }
+
+    .detail-item i {
+        color: #667eea;
+        margin-right: 8px;
+        font-size: 1.1rem;
+    }
+
+    .book-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        border-radius: 10px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        margin-top: 15px;
+    }
+
+    .book-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+
+    .no-results i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #a0aec0;
+    }
+</style>
+
+<div class="find-doctor-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="search-card">
+                    <h2 class="text-center mb-4">Find a Doctor</h2>
+                    
+                    <form method="GET" action="{% url 'find_doctor' %}" class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" name="search" placeholder="Search by specialization..." 
+                               value="{{ search_query }}" class="form-control">
+                    </form>
+
+                    {% if doctors %}
+                        {% for doctor in doctors %}
+                            <div class="doctor-card">
+                                <div class="doctor-header">
+                                    <img src="{% if doctor.user_profile.profile_image %}{{ doctor.user_profile.profile_image.url }}{% else %}https://via.placeholder.com/60{% endif %}" 
+                                         alt="Doctor" class="doctor-avatar">
+                                    <div class="doctor-info">
+                                        <h3>Dr. {{ doctor.user_profile.full_name }}</h3>
+                                        <p>{{ doctor.specialization }}</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-graduation-cap"></i>
+                                        <span>{{ doctor.qualification }}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-clock"></i>
+                                        <span>{{ doctor.experience }} years experience</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-dollar-sign"></i>
+                                        <span>Fee: ${{ doctor.consultation_fee }}</span>
+                                    </div>
+                                </div>
+                                <a href="{% url 'book_appointment' %}?doctor={{ doctor.id }}" class="book-btn">
+                                    <i class="fas fa-calendar-plus"></i> Book Appointment
+                                </a>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-results">
+                            <i class="fas fa-user-md"></i>
+                            <h4>No Doctors Found</h4>
+                            <p>Try different search terms or browse all doctors.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

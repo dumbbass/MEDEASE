@@ -1,0 +1,227 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .patients-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .patients-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .patient-item {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .patient-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .patient-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .patient-info {
+        flex: 1;
+    }
+
+    .patient-name {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 5px;
+    }
+
+    .patient-details {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .patient-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-action {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+    }
+
+    .btn-view {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .search-box {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 20px;
+        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+    }
+
+    .patient-count {
+        color: #718096;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="patients-container">
+    <div class="container">
+        <a href="{% url 'doctor_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="patients-card">
+                    <h2 class="section-title">My Patients</h2>
+
+                    <div class="search-box">
+                        <input type="text" id="patientSearch" class="search-input" placeholder="Search patients...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+
+                    <div class="patient-count">
+                        Total Patients: <strong>{{ patients|length }}</strong>
+                    </div>
+
+                    {% if patients %}
+                        {% for patient in patients %}
+                            <div class="patient-item">
+                                {% if patient.profile_image %}
+                                    <img src="{{ patient.profile_image.url }}" alt="{{ patient.full_name }}" class="patient-avatar">
+                                {% else %}
+                                    <img src="https://via.placeholder.com/60" alt="Default Avatar" class="patient-avatar">
+                                {% endif %}
+                                
+                                <div class="patient-info">
+                                    <div class="patient-name">{{ patient.full_name }}</div>
+                                    <div class="patient-details">
+                                        <i class="fas fa-envelope"></i> {{ patient.user.email }}
+                                        {% if patient.phone %}
+                                            <br><i class="fas fa-phone"></i> {{ patient.phone }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="patient-actions">
+                                    <a href="{% url 'doctor_patient_detail' patient.id %}" class="btn-action btn-view">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted">No patients found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Patient search functionality
+document.getElementById('patientSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const patientItems = document.querySelectorAll('.patient-item');
+
+    patientItems.forEach(item => {
+        const patientName = item.querySelector('.patient-name').textContent.toLowerCase();
+        const patientDetails = item.querySelector('.patient-details').textContent.toLowerCase();
+
+        if (patientName.includes(searchTerm) || patientDetails.includes(searchTerm)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,253 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .records-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .records-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .record-item {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+
+    .record-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .record-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .record-date {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .record-type {
+        font-weight: 500;
+        color: #2d3748;
+    }
+
+    .record-details {
+        color: #4a5568;
+        font-size: 0.95rem;
+        margin-bottom: 15px;
+    }
+
+    .record-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .action-btn {
+        padding: 8px 15px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-download {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .btn-view {
+        background: #edf2f7;
+        color: #4a5568;
+    }
+
+    .btn-view:hover {
+        background: #e2e8f0;
+        transform: translateY(-2px);
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .no-records {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+
+    .no-records i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #a0aec0;
+    }
+
+    .record-category {
+        margin-bottom: 30px;
+    }
+
+    .category-title {
+        font-size: 1.2rem;
+        color: #2d3748;
+        margin-bottom: 15px;
+    }
+</style>
+
+<div class="records-container">
+    <div class="container">
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="records-card">
+                    <h2 class="section-title">Medical Records</h2>
+
+                    <div class="record-category">
+                        <h3 class="category-title">Test Results</h3>
+                        <div class="record-item">
+                            <div class="record-header">
+                                <div>
+                                    <div class="record-type">Blood Test Results</div>
+                                    <div class="record-date">February 15, 2025</div>
+                                </div>
+                            </div>
+                            <div class="record-details">
+                                Complete Blood Count (CBC) and Basic Metabolic Panel
+                            </div>
+                            <div class="record-actions">
+                                <button class="action-btn btn-download">
+                                    <i class="fas fa-download"></i> Download PDF
+                                </button>
+                                <button class="action-btn btn-view">
+                                    <i class="fas fa-eye"></i> View Results
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3 class="category-title">Imaging Reports</h3>
+                        <div class="record-item">
+                            <div class="record-header">
+                                <div>
+                                    <div class="record-type">Chest X-Ray</div>
+                                    <div class="record-date">February 10, 2025</div>
+                                </div>
+                            </div>
+                            <div class="record-details">
+                                Routine chest examination
+                            </div>
+                            <div class="record-actions">
+                                <button class="action-btn btn-download">
+                                    <i class="fas fa-download"></i> Download Report
+                                </button>
+                                <button class="action-btn btn-view">
+                                    <i class="fas fa-eye"></i> View Images
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3 class="category-title">Vaccination Records</h3>
+                        <div class="record-item">
+                            <div class="record-header">
+                                <div>
+                                    <div class="record-type">COVID-19 Vaccination</div>
+                                    <div class="record-date">January 15, 2025</div>
+                                </div>
+                            </div>
+                            <div class="record-details">
+                                Booster Shot - Third Dose
+                            </div>
+                            <div class="record-actions">
+                                <button class="action-btn btn-download">
+                                    <i class="fas fa-download"></i> Download Certificate
+                                </button>
+                                <button class="action-btn btn-view">
+                                    <i class="fas fa-eye"></i> View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- If no records -->
+                    <!-- <div class="no-records">
+                        <i class="fas fa-file-medical"></i>
+                        <h4>No Medical Records</h4>
+                        <p>Your medical records will appear here.</p>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.btn-download').forEach(button => {
+    button.addEventListener('click', function() {
+        alert('Download functionality will be implemented soon!');
+    });
+});
+
+document.querySelectorAll('.btn-view').forEach(button => {
+    button.addEventListener('click', function() {
+        alert('View details functionality will be implemented soon!');
+    });
+});
+</script>
+{% endblock %} 

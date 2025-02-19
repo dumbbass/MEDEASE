@@ -1,0 +1,48 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    /* Add your styles here */
+</style>
+
+<div class="prescription-detail-container">
+    <div class="container">
+        <a href="{% url 'prescriptions' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Prescriptions
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="prescription-detail-card">
+                    <h2>Prescription Details</h2>
+                    <div class="prescription-info">
+                        <p><strong>Doctor:</strong> Dr. {{ prescription.doctor.user_profile.full_name }}</p>
+                        <p><strong>Date:</strong> {{ prescription.prescribed_date|date:"F j, Y" }}</p>
+                        <p><strong>Status:</strong> {{ prescription.status }}</p>
+                    </div>
+
+                    <h3>Medications</h3>
+                    {% for medication in medications %}
+                        <div class="medication-detail">
+                            <h4>{{ medication.name }}</h4>
+                            <p><strong>Dosage:</strong> {{ medication.dosage }}</p>
+                            <p><strong>Frequency:</strong> {{ medication.frequency }}</p>
+                            <p><strong>Instructions:</strong> {{ medication.instructions }}</p>
+                            {% if medication.duration %}
+                                <p><strong>Duration:</strong> {{ medication.duration }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    {% if prescription.notes %}
+                        <div class="notes-section">
+                            <h3>Additional Notes</h3>
+                            <p>{{ prescription.notes }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,603 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .dashboard-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .dashboard-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .welcome-section {
+        text-align: center;
+        margin-bottom: 30px;
+        color: white;
+    }
+
+    .profile-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 20px;
+        border: 4px solid white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .action-card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .action-card i {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        color: #667eea;
+    }
+
+    .action-card h3 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+        color: #2d3748;
+    }
+
+    .action-card p {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .upcoming-appointments {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+
+    .appointment-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        background: #f7fafc;
+        transition: all 0.3s ease;
+    }
+
+    .appointment-card:hover {
+        background: #edf2f7;
+    }
+
+    .appointment-info {
+        flex: 1;
+    }
+
+    .appointment-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-action {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-reschedule {
+        background: #4299e1;
+        color: white;
+    }
+
+    .btn-cancel {
+        background: #f56565;
+        color: white;
+    }
+
+    .btn-cancel:hover {
+        background: #e53e3e;
+        transform: translateY(-2px);
+    }
+
+    /* Add styles for disabled state */
+    .btn-action:disabled {
+        background: #cbd5e0;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .logout-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .logout-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-confirmed {
+        background: #c6f6d5;
+        color: #2f855a;
+    }
+
+    .status-pending {
+        background: #feebc8;
+        color: #9c4221;
+    }
+
+    /* Sidenav styles */
+    .sidenav {
+        height: 100%;
+        width: 280px;
+        position: fixed;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        overflow-x: hidden;
+        padding-top: 20px;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidenav-header {
+        padding: 20px;
+        text-align: center;
+        border-bottom: 1px solid #edf2f7;
+        margin-bottom: 20px;
+    }
+
+    .sidenav-profile-img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 10px;
+        border: 3px solid #667eea;
+    }
+
+    .sidenav a {
+        padding: 15px 25px;
+        text-decoration: none;
+        font-size: 1rem;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+    .sidenav a:hover {
+        background: #edf2f7;
+        color: #667eea;
+    }
+
+    .sidenav a.active {
+        background: #667eea;
+        color: white;
+    }
+
+    .sidenav i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .notification-badge {
+        background: #e53e3e;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        margin-left: auto;
+    }
+
+    /* Adjust main content */
+    .dashboard-container {
+        margin-left: 280px;
+        transition: margin-left 0.3s;
+    }
+
+    /* Responsive */
+    @media screen and (max-width: 768px) {
+        .sidenav {
+            width: 0;
+            padding-top: 60px;
+        }
+        
+        .dashboard-container {
+            margin-left: 0;
+        }
+        
+        .menu-toggle {
+            display: block;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 2;
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    }
+
+    .modal-content {
+        border-radius: 15px;
+        border: none;
+    }
+
+    .modal-header {
+        border-bottom: 2px solid #edf2f7;
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        border-top: 2px solid #edf2f7;
+        padding: 1.5rem;
+    }
+
+    .modal-body {
+        padding: 2rem 1.5rem;
+    }
+
+    .modal-title {
+        color: #2d3748;
+        font-weight: 600;
+    }
+
+    .btn-secondary {
+        background-color: #edf2f7;
+        color: #4a5568;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+        background-color: #e2e8f0;
+        transform: translateY(-2px);
+    }
+
+    .btn-danger {
+        background-color: #f56565;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #e53e3e;
+        transform: translateY(-2px);
+    }
+
+    .toast-container {
+        z-index: 1050;
+    }
+
+    .toast {
+        background-color: rgba(0, 0, 0, 0.85);
+        border-radius: 10px;
+    }
+
+    .toast.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .toast.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .btn-delete {
+        background: #e53e3e;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #c53030;
+        transform: translateY(-2px);
+    }
+
+    /* Add warning icon color */
+    .modal-body i.fa-exclamation-triangle {
+        color: #e53e3e;
+        margin-right: 8px;
+    }
+
+    /* Make delete button more prominent */
+    .modal-footer .btn-danger {
+        background-color: #e53e3e;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .modal-footer .btn-danger:hover {
+        background-color: #c53030;
+        transform: translateY(-2px);
+    }
+</style>
+
+<!-- Add menu toggle button for mobile -->
+<div class="menu-toggle" onclick="toggleNav()">
+    <i class="fas fa-bars"></i>
+</div>
+
+<!-- Sidenav -->
+<div class="sidenav" id="mySidenav">
+    <div class="sidenav-header">
+        {% if user_profile.profile_image %}
+            <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="sidenav-profile-img">
+        {% else %}
+            <img src="https://via.placeholder.com/80" alt="Profile" class="sidenav-profile-img">
+        {% endif %}
+        <h4>{{ user_profile.full_name }}</h4>
+        <small class="text-muted">Patient ID: {{ user_profile.id }}</small>
+    </div>
+    
+    <a href="{% url 'patient_dashboard' %}" class="active">
+        <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{% url 'medical_records' %}">
+        <i class="fas fa-file-medical"></i> Medical Records
+    </a>
+    <a href="{% url 'prescriptions' %}">
+        <i class="fas fa-prescription"></i> Prescriptions
+    </a>
+    <a href="{% url 'payments' %}">
+        <i class="fas fa-credit-card"></i> Payments & Billing
+    </a>
+    <a href="{% url 'notifications' %}">
+        <i class="fas fa-bell"></i> Notifications
+        {% if unread_notifications_count > 0 %}
+            <span class="notification-badge">{{ unread_notifications_count }}</span>
+        {% endif %}
+    </a>
+    <a href="{% url 'profile_settings' %}">
+        <i class="fas fa-user-cog"></i> Profile & Settings
+    </a>
+    <a href="{% url 'help_support' %}">
+        <i class="fas fa-question-circle"></i> Help & Support
+    </a>
+    <a href="{% url 'logout' %}">
+        <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+</div>
+
+<!-- Existing dashboard content with margin-left adjusted -->
+<div class="dashboard-container">
+    <div class="welcome-section">
+        {% if user_profile.profile_image %}
+            <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="profile-image">
+        {% else %}
+            <img src="https://via.placeholder.com/120" alt="Default Profile" class="profile-image">
+        {% endif %}
+        <h2>Welcome, {{ user_profile.full_name }}!</h2>
+        <p>Manage your appointments and health records</p>
+    </div>
+
+    <div class="quick-actions">
+        <a href="{% url 'book_appointment' %}" class="action-card">
+            <i class="fas fa-calendar-plus"></i>
+            <h3>Book Appointment</h3>
+            <p>Schedule a new appointment with a doctor</p>
+        </a>
+        <a href="{% url 'medical_history' %}" class="action-card">
+            <i class="fas fa-history"></i>
+            <h3>Medical History</h3>
+            <p>View your past appointments and records</p>
+        </a>
+        <a href="{% url 'find_doctor' %}" class="action-card">
+            <i class="fas fa-user-md"></i>
+            <h3>Find Doctor</h3>
+            <p>Search and view doctor profiles</p>
+        </a>
+    </div>
+
+    <div class="dashboard-card">
+        <h3><i class="fas fa-calendar-check"></i> Upcoming Appointments</h3>
+        <div class="upcoming-appointments">
+            {% if appointments %}
+                {% for appointment in appointments %}
+                    <div class="appointment-card">
+                        <div class="appointment-info">
+                            <h4>Dr. {{ appointment.doctor.user_profile.full_name }}</h4>
+                            <p>{{ appointment.appointment_date|date:"F j, Y" }} at {{ appointment.appointment_time }}</p>
+                            <span class="status-badge {% if appointment.status == 'CONFIRMED' %}status-confirmed{% else %}status-pending{% endif %}">
+                                {{ appointment.status }}
+                            </span>
+                        </div>
+                        <div class="appointment-actions">
+                            {% if appointment.status != 'CANCELLED' %}
+                                <button type="button" class="btn-action btn-cancel" 
+                                        onclick="showCancelModal('{% url 'cancel_appointment' appointment.id %}')">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-action btn-delete" 
+                                        onclick="showDeleteModal('{% url 'delete_appointment' appointment.id %}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center text-muted">No upcoming appointments</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add this modal HTML right before the closing body tag -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">Cancel Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this appointment?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep it</button>
+                <form id="cancelForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Cancel Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this new modal for delete confirmation -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this cancelled appointment?</p>
+                <p class="text-muted">This action cannot be undone and will permanently remove the appointment from your history.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep it</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete Permanently</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleNav() {
+    const sidenav = document.getElementById("mySidenav");
+    const dashboardContainer = document.querySelector(".dashboard-container");
+    
+    if (sidenav.style.width === "280px" || sidenav.style.width === "") {
+        sidenav.style.width = "0";
+        dashboardContainer.style.marginLeft = "0";
+    } else {
+        sidenav.style.width = "280px";
+        dashboardContainer.style.marginLeft = "280px";
+    }
+}
+
+// Close sidenav when clicking outside on mobile
+document.addEventListener('click', function(event) {
+    const sidenav = document.getElementById("mySidenav");
+    const menuToggle = document.querySelector(".menu-toggle");
+    
+    if (window.innerWidth <= 768 && 
+        !sidenav.contains(event.target) && 
+        !menuToggle.contains(event.target)) {
+        sidenav.style.width = "0";
+        document.querySelector(".dashboard-container").style.marginLeft = "0";
+    }
+});
+
+function showCancelModal(url) {
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    const form = document.getElementById('cancelForm');
+    form.action = url;
+    modal.show();
+}
+
+function showDeleteModal(url) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const form = document.getElementById('deleteForm');
+    form.action = url;
+    modal.show();
+}
+
+// Add toast notifications for success/error messages
+{% if messages %}
+    {% for message in messages %}
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${message.tags === 'success' ? 'success' : 'danger'} border-0" 
+                 role="alert" 
+                 aria-live="assertive" 
+                 aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${message.tags === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+        toastContainer.innerHTML = toastHtml;
+        document.body.appendChild(toastContainer);
+
+        const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'), {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+
+        // Remove the toast container after it's hidden
+        toastContainer.querySelector('.toast').addEventListener('hidden.bs.toast', () => {
+            toastContainer.remove();
+        });
+    {% endfor %}
+{% endif %}
+</script>
+{% endblock %} 
