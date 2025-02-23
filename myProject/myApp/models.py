@@ -199,3 +199,14 @@ class MedicalRecord(models.Model):
 
     def __str__(self):
         return f"{self.get_record_type_display()} for {self.patient.full_name}"
+
+class DoctorRegistrationCode(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    used_by = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True, blank=True, related_name='registration_code')
+
+    def __str__(self):
+        return f"Code: {self.code} ({'Active' if self.is_active else 'Inactive'})"

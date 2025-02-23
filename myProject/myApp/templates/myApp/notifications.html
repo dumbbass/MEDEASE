@@ -254,6 +254,38 @@
 </div>
 
 <script>
+function markAllRead() {
+    fetch('/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.querySelectorAll('.notification-item').forEach(item => {
+                // Remove unread class
+                item.classList.remove('unread');
+                
+                // Remove only the "Mark as Read" button
+                const markReadBtn = item.querySelector('button.notification-btn:not(.primary):not(.btn-delete)');
+                if (markReadBtn) {
+                    markReadBtn.remove();
+                }
+                
+                // Remove the "New" badge if it exists
+                const newBadge = item.querySelector('.badge.bg-success');
+                if (newBadge) {
+                    newBadge.remove();
+                }
+            });
+            updateUnreadCount();
+        }
+    });
+}
+
 function markAsRead(notificationId) {
     fetch(`/notifications/mark-read/${notificationId}/`, {
         method: 'POST',
@@ -267,31 +299,16 @@ function markAsRead(notificationId) {
         if (data.status === 'success') {
             const notification = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
             notification.classList.remove('unread');
-            updateUnreadCount();
-            // Remove the "Mark as Read" button
-            notification.querySelector('button.notification-btn:not(.primary)').remove();
-        }
-    });
-}
-
-function markAllRead() {
-    fetch('/notifications/mark-all-read/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            document.querySelectorAll('.notification-item').forEach(item => {
-                item.classList.remove('unread');
-                const markReadBtn = item.querySelector('button.notification-btn:not(.primary)');
-                if (markReadBtn) {
-                    markReadBtn.remove();
-                }
-            });
+            // Remove only the "Mark as Read" button
+            const markReadBtn = notification.querySelector('button.notification-btn:not(.primary):not(.btn-delete)');
+            if (markReadBtn) {
+                markReadBtn.remove();
+            }
+            // Remove the "New" badge
+            const newBadge = notification.querySelector('.badge.bg-success');
+            if (newBadge) {
+                newBadge.remove();
+            }
             updateUnreadCount();
         }
     });

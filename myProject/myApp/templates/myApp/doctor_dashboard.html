@@ -203,6 +203,16 @@
             display: block;
         }
     }
+
+    .btn-accept {
+        background: #48bb78;
+        color: white;
+    }
+
+    .btn-accept:hover {
+        background: #38a169;
+        transform: translateY(-2px);
+    }
 </style>
 
 <!-- Sidenav -->
@@ -284,6 +294,11 @@
                                 </span>
                             </div>
                             <div class="appointment-actions">
+                                {% if appointment.status == 'PENDING' %}
+                                    <button class="btn-action btn-accept" onclick="acceptAppointment({{ appointment.id }})">
+                                        <i class="fas fa-check"></i> Accept
+                                    </button>
+                                {% endif %}
                                 {% if appointment.status == 'CONFIRMED' %}
                                     <button class="btn-action btn-complete" onclick="completeAppointment({{ appointment.id }})">
                                         <i class="fas fa-check"></i> Complete
@@ -395,6 +410,30 @@ function deleteAppointment(appointmentId) {
         .catch(error => {
             console.error('Error:', error);
             showToast('Error deleting appointment', 'error');
+        });
+    }
+}
+
+function acceptAppointment(appointmentId) {
+    if (confirm('Accept this appointment?')) {
+        fetch(`/doctor/accept-appointment/${appointmentId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('Appointment accepted successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Error accepting appointment', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error accepting appointment', 'error');
         });
     }
 }

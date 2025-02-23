@@ -115,6 +115,77 @@
         font-size: 0.9rem;
         margin-top: 5px;
     }
+
+    .doctor-fields {
+        background: #f8fafc;
+        padding: 25px;
+        border-radius: 15px;
+        margin-top: 20px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .section-title {
+        color: #2d3748;
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .day-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .form-check-inline {
+        margin-right: 0;
+    }
+
+    .sub-label {
+        color: #718096;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+
+    .admin-code-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #ebf8ff;
+        border-radius: 10px;
+        border: 1px solid #bee3f8;
+    }
+
+    .day-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .day-btn {
+        padding: 8px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        color: #4a5568;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .day-btn.selected {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .day-btn:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+    }
 </style>
 
 <div class="register-container">
@@ -126,16 +197,26 @@
                 {% csrf_token %}
                 
                 <div class="user-type-selector">
-                    <div class="user-type-option active" data-type="PATIENT">
+                    {% if not code %}
+                    <!-- Only Patient option when no code -->
+                    <div class="user-type-option active" data-type="PATIENT" style="width: 100%;">
                         <i class="fas fa-user"></i>
                         <h4>Patient</h4>
                         <p class="text-muted">I want to book appointments</p>
                     </div>
-                    <div class="user-type-option" data-type="DOCTOR">
+                    {% else %}
+                    <!-- Both options when code is present -->
+                    <div class="user-type-option" data-type="PATIENT">
+                        <i class="fas fa-user"></i>
+                        <h4>Patient</h4>
+                        <p class="text-muted">I want to book appointments</p>
+                    </div>
+                    <div class="user-type-option" data-type="DOCTOR" id="doctorOption">
                         <i class="fas fa-user-md"></i>
                         <h4>Doctor</h4>
                         <p class="text-muted">I want to manage patients</p>
                     </div>
+                    {% endif %}
                 </div>
                 
                 <input type="hidden" name="user_type" id="userType" value="PATIENT">
@@ -167,36 +248,74 @@
 
                 <!-- Doctor-specific fields -->
                 <div class="doctor-fields">
+                    <h3 class="section-title">Professional Information</h3>
                     <div class="form-group">
                         <label class="form-label">Specialization</label>
-                        <input type="text" name="specialization" class="form-control">
+                        <select name="specialization" class="form-control" required>
+                            <option value="">Select Specialization</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Dermatology">Dermatology</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                            <option value="Neurology">Neurology</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Psychiatry">Psychiatry</option>
+                            <option value="General Medicine">General Medicine</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Years of Experience</label>
-                        <input type="number" name="experience" class="form-control" min="0">
+                        <input type="number" name="experience" class="form-control" min="0" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Qualifications</label>
-                        <input type="text" name="qualification" class="form-control">
+                        <textarea name="qualification" class="form-control" rows="2" required
+                                  placeholder="e.g., MBBS, MD Cardiology, Fellowship in Interventional Cardiology"></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Consultation Fee</label>
-                        <input type="number" name="consultation_fee" class="form-control" min="0" step="0.01">
+                        <label class="form-label">Consultation Fee (in $)</label>
+                        <input type="number" name="consultation_fee" class="form-control" min="0" step="0.01" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Available Days</label>
-                        <input type="text" name="available_days" class="form-control" 
-                               placeholder="e.g., Monday-Friday">
+                        <div class="day-selector">
+                            <input type="hidden" name="available_days" id="availableDays">
+                            <div class="day-buttons">
+                                <button type="button" class="day-btn" data-day="Monday">Mon</button>
+                                <button type="button" class="day-btn" data-day="Tuesday">Tue</button>
+                                <button type="button" class="day-btn" data-day="Wednesday">Wed</button>
+                                <button type="button" class="day-btn" data-day="Thursday">Thu</button>
+                                <button type="button" class="day-btn" data-day="Friday">Fri</button>
+                                <button type="button" class="day-btn" data-day="Saturday">Sat</button>
+                                <button type="button" class="day-btn" data-day="Sunday">Sun</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Available Time</label>
-                        <input type="text" name="available_time" class="form-control" 
-                               placeholder="e.g., 9:00 AM - 5:00 PM">
+                        <label class="form-label">Available Time Slots</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="sub-label">Start Time</label>
+                                <input type="time" name="available_time_start" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sub-label">End Time</label>
+                                <input type="time" name="available_time_end" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add this for admin-provided registration code -->
+                <div class="admin-code-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Admin Registration Code</label>
+                        <input type="text" name="admin_code" class="form-control" id="adminCode">
+                        <small class="text-muted">Please contact admin for doctor registration.</small>
                     </div>
                 </div>
 
@@ -217,44 +336,75 @@
 </div>
 
 <script>
+// Set admin code if provided
+{% if code %}
+    document.getElementById('adminCode').value = '{{ code }}';
+    document.querySelector('.admin-code-section').style.display = 'block';
+{% endif %}
+
 document.querySelectorAll('.user-type-option').forEach(option => {
     option.addEventListener('click', function() {
-        // Update active state
         document.querySelectorAll('.user-type-option').forEach(opt => {
             opt.classList.remove('active');
         });
         this.classList.add('active');
 
-        // Update hidden input
         const userType = this.dataset.type;
         document.getElementById('userType').value = userType;
 
-        // Toggle doctor fields
         const doctorFields = document.querySelector('.doctor-fields');
+        const adminCodeSection = document.querySelector('.admin-code-section');
+        
         if (userType === 'DOCTOR') {
-            doctorFields.classList.add('show');
-            // Make doctor fields required
-            doctorFields.querySelectorAll('input').forEach(input => {
+            doctorFields.style.display = 'block';
+            adminCodeSection.style.display = 'block';
+            doctorFields.querySelectorAll('input, select, textarea').forEach(input => {
                 input.required = true;
             });
         } else {
-            doctorFields.classList.remove('show');
-            // Remove required from doctor fields
-            doctorFields.querySelectorAll('input').forEach(input => {
+            doctorFields.style.display = 'none';
+            adminCodeSection.style.display = 'none';
+            doctorFields.querySelectorAll('input, select, textarea').forEach(input => {
                 input.required = false;
             });
         }
     });
 });
 
-// Form validation
+// Add this to your existing script section
+const selectedDays = new Set();
+const daysInput = document.getElementById('availableDays');
+
+document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const day = this.dataset.day;
+        if (selectedDays.has(day)) {
+            selectedDays.delete(day);
+            this.classList.remove('selected');
+        } else {
+            selectedDays.add(day);
+            this.classList.add('selected');
+        }
+        daysInput.value = Array.from(selectedDays).join(',');
+    });
+});
+
+// Update form validation
 document.getElementById('registerForm').addEventListener('submit', function(e) {
     const password1 = this.querySelector('input[name="password1"]').value;
     const password2 = this.querySelector('input[name="password2"]').value;
+    const userType = document.getElementById('userType').value;
 
     if (password1 !== password2) {
         e.preventDefault();
         alert('Passwords do not match!');
+        return;
+    }
+
+    if (userType === 'DOCTOR' && selectedDays.size === 0) {
+        e.preventDefault();
+        alert('Please select at least one available day');
+        return;
     }
 });
 </script>

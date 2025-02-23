@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord
+from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord, DoctorRegistrationCode
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -14,6 +14,8 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.utils.timesince import timesince
+from django.conf import settings
+from django.urls import reverse
 
 def home(request):
     # Get or create a profile
@@ -163,8 +165,25 @@ def get_hobbies(request):
 
 @csrf_protect
 def register_view(request):
+    code = request.GET.get('code')
     if request.method == 'POST':
         try:
+            user_type = request.POST.get('user_type')
+            admin_code = request.POST.get('admin_code')
+
+            if user_type == 'DOCTOR':
+                try:
+                    reg_code = DoctorRegistrationCode.objects.get(
+                        code=admin_code,
+                        is_active=True,
+                        used_by__isnull=True
+                    )
+                    if reg_code.expires_at and reg_code.expires_at < timezone.now():
+                        raise ValueError('Registration code has expired')
+                except DoctorRegistrationCode.DoesNotExist:
+                    raise ValueError('Invalid or used registration code')
+
+            # Rest of your registration logic...
             with transaction.atomic():
                 # Get form data
                 username = request.POST['username']
@@ -172,7 +191,6 @@ def register_view(request):
                 password1 = request.POST['password1']
                 password2 = request.POST['password2']
                 full_name = request.POST['full_name']
-                user_type = request.POST['user_type']
                 phone = request.POST.get('phone', '')
                 address = request.POST.get('address', '')
 
@@ -211,25 +229,28 @@ def register_view(request):
 
                 # If user is a doctor, create Doctor profile
                 if user_type == 'DOCTOR':
-                    Doctor.objects.create(
+                    doctor = Doctor.objects.create(
                         user_profile=user_profile,
-                        specialization='',
-                        experience=0,
-                        qualification='',
-                        consultation_fee=0.00,
-                        available_days='',
-                        available_time=''
+                        specialization=request.POST.get('specialization', ''),
+                        experience=int(request.POST.get('experience', 0)),
+                        qualification=request.POST.get('qualification', ''),
+                        consultation_fee=float(request.POST.get('consultation_fee', 0)),
+                        available_days=request.POST.get('available_days', '').strip(),
+                        available_time=request.POST.get('available_time', '')
                     )
+                    reg_code.used_by = doctor
+                    reg_code.save()
 
                 login(request, user)
                 return redirect('login')
 
         except Exception as e:
             return render(request, 'myApp/register.html', {
-                'error_message': str(e)
+                'error_message': str(e),
+                'code': code
             })
 
-    return render(request, 'myApp/register.html')
+    return render(request, 'myApp/register.html', {'code': code})
 
 @csrf_protect
 def login_view(request):
@@ -240,10 +261,18 @@ def login_view(request):
         user = authenticate(username=username, password=password)
         
         if user is not None:
-            login(request, user)
+            # Use a different session key for regular user login
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             
             # Get user profile
             user_profile = UserProfile.objects.get(user=user)
+            
+            # Create login history entry
+            LoginHistory.objects.create(
+                user=user_profile,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT')
+            )
             
             # Redirect based on user type
             if user_profile.user_type == 'DOCTOR':
@@ -786,8 +815,8 @@ def doctor_settings(request):
             doctor.experience = request.POST.get('experience')
             doctor.qualification = request.POST.get('qualification')
             doctor.consultation_fee = request.POST.get('consultation_fee')
-            doctor.available_days = request.POST.get('available_days')
-            doctor.available_time = request.POST.get('available_time')
+            doctor.available_days = request.POST.get('available_days', '').strip()
+            doctor.available_time = request.POST.get('available_time', '')
             doctor.save()
 
             # Update user profile
@@ -815,3 +844,36 @@ def doctor_settings(request):
         'doctor': doctor
     }
     return render(request, 'myApp/doctor_settings.html', context)
+
+@login_required
+def generate_doctor_link(request):
+    if request.user.is_superuser:
+        registration_url = request.build_absolute_uri(
+            reverse('register') + f'?code={settings.DOCTOR_REGISTRATION_CODES[0]}'
+        )
+        return JsonResponse({
+            'registration_url': registration_url
+        })
+    return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+@login_required
+def accept_appointment(request, appointment_id):
+    if request.method == 'POST':
+        doctor = Doctor.objects.get(user_profile__user=request.user)
+        appointment = get_object_or_404(Appointment, id=appointment_id, doctor=doctor)
+        
+        if appointment.status == 'PENDING':
+            appointment.status = 'CONFIRMED'
+            appointment.save()
+            
+            # Create notification for patient
+            create_notification(
+                appointment.patient,
+                'APPOINTMENT',
+                'Appointment Confirmed',
+                f'Dr. {doctor.user_profile.full_name} has confirmed your appointment for {appointment.appointment_date}.',
+                None
+            )
+            
+            return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)

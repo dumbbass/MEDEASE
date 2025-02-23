@@ -200,6 +200,11 @@
                                     </span>
                                 </div>
                                 <div class="appointment-actions">
+                                    {% if appointment.status == 'PENDING' %}
+                                        <button class="btn-action btn-accept" onclick="acceptAppointment({{ appointment.id }})">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                    {% endif %}
                                     {% if appointment.status == 'CONFIRMED' %}
                                         <button class="btn-action btn-complete" onclick="completeAppointment({{ appointment.id }})">
                                             <i class="fas fa-check"></i> Complete
