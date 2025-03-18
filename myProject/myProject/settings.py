@@ -126,3 +126,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Authentication settings
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/patient-dashboard/'
+
+# Doctor registration settings
+DOCTOR_REGISTRATION_CODES = [
+    'DOCTOR123',
+    'ADMIN456',
+    # Add more codes as needed
+]

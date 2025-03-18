@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from django.utils.timesince import timesince
 from django.conf import settings
 from django.urls import reverse
+from django.db.models import Q
 
 def home(request):
     # Get or create a profile
@@ -166,21 +167,49 @@ def get_hobbies(request):
 @csrf_protect
 def register_view(request):
     code = request.GET.get('code')
+    
+    # Validate the code if it's provided
+    valid_code = False
+    if code:
+        try:
+            # Check if the code is in the database or settings
+            valid_code = DoctorRegistrationCode.objects.filter(
+                code=code,
+                is_active=True,
+                used_by__isnull=True
+            ).exists() or code in settings.DOCTOR_REGISTRATION_CODES
+        except:
+            valid_code = False
+    
     if request.method == 'POST':
         try:
             user_type = request.POST.get('user_type')
             admin_code = request.POST.get('admin_code')
 
             if user_type == 'DOCTOR':
+                # For doctor registration, validate the admin code
+                valid_registration_code = False
+                
                 try:
+                    # First check the database for a valid code
                     reg_code = DoctorRegistrationCode.objects.get(
                         code=admin_code,
                         is_active=True,
                         used_by__isnull=True
                     )
+                    
                     if reg_code.expires_at and reg_code.expires_at < timezone.now():
                         raise ValueError('Registration code has expired')
+                    
+                    valid_registration_code = True
                 except DoctorRegistrationCode.DoesNotExist:
+                    # If not in database, check settings
+                    if admin_code in settings.DOCTOR_REGISTRATION_CODES:
+                        valid_registration_code = True
+                    else:
+                        raise ValueError('Invalid or used registration code')
+                
+                if not valid_registration_code:
                     raise ValueError('Invalid or used registration code')
 
             # Rest of your registration logic...
@@ -229,28 +258,52 @@ def register_view(request):
 
                 # If user is a doctor, create Doctor profile
                 if user_type == 'DOCTOR':
+                    # Process available days from form
+                    available_days = request.POST.get('available_days', '')
+                    
+                    # Create doctor record
                     doctor = Doctor.objects.create(
                         user_profile=user_profile,
                         specialization=request.POST.get('specialization', ''),
-                        experience=int(request.POST.get('experience', 0)),
+                        experience=int(request.POST.get('experience', 0) or 0),
                         qualification=request.POST.get('qualification', ''),
-                        consultation_fee=float(request.POST.get('consultation_fee', 0)),
-                        available_days=request.POST.get('available_days', '').strip(),
-                        available_time=request.POST.get('available_time', '')
+                        consultation_fee=float(request.POST.get('consultation_fee', 0) or 0),
+                        available_days=available_days,
+                        available_time=request.POST.get('available_time_start', '') + ' - ' + request.POST.get('available_time_end', '')
                     )
-                    reg_code.used_by = doctor
-                    reg_code.save()
+                    
+                    # If using a database registration code, mark it as used
+                    try:
+                        reg_code = DoctorRegistrationCode.objects.get(
+                            code=admin_code,
+                            is_active=True,
+                            used_by__isnull=True
+                        )
+                        reg_code.used_by = doctor
+                        reg_code.save()
+                    except DoctorRegistrationCode.DoesNotExist:
+                        # If using a code from settings, no need to update database
+                        pass
 
                 login(request, user)
-                return redirect('login')
+                
+                # Redirect based on user type
+                if user_type == 'DOCTOR':
+                    return redirect('doctor_dashboard')
+                else:
+                    return redirect('patient_dashboard')
 
         except Exception as e:
             return render(request, 'myApp/register.html', {
                 'error_message': str(e),
-                'code': code
+                'code': code,
+                'valid_code': valid_code
             })
 
-    return render(request, 'myApp/register.html', {'code': code})
+    return render(request, 'myApp/register.html', {
+        'code': code,
+        'valid_code': valid_code
+    })
 
 @csrf_protect
 def login_view(request):
@@ -406,13 +459,24 @@ def book_appointment(request):
 @login_required
 def medical_history(request):
     user_profile = UserProfile.objects.get(user=request.user)
-    past_appointments = Appointment.objects.filter(
-        patient=user_profile,
-        appointment_date__lt=datetime.now().date()
+    
+    # Get all appointments regardless of date or status
+    all_appointments = Appointment.objects.filter(
+        patient=user_profile
     ).order_by('-appointment_date')
     
+    # Count different statuses for summary
+    appointment_stats = {
+        'total': all_appointments.count(),
+        'pending': all_appointments.filter(status='PENDING').count(),
+        'confirmed': all_appointments.filter(status='CONFIRMED').count(),
+        'completed': all_appointments.filter(status='COMPLETED').count(),
+        'cancelled': all_appointments.filter(status='CANCELLED').count()
+    }
+    
     return render(request, 'myApp/medical_history.html', {
-        'appointments': past_appointments
+        'appointments': all_appointments,
+        'stats': appointment_stats
     })
 
 @login_required
@@ -420,9 +484,24 @@ def cancel_appointment(request, appointment_id):
     if request.method == 'POST':  # Only allow POST requests
         appointment = get_object_or_404(Appointment, id=appointment_id)
         
+        # Only allow cancellation of appointments in PENDING or CONFIRMED status
+        if appointment.status in ['COMPLETED', 'CANCELLED']:
+            messages.error(request, 'Cannot cancel appointments that are already completed or cancelled.')
+            return redirect('patient_dashboard')
+            
         if appointment.patient.user == request.user:
             appointment.status = 'CANCELLED'
             appointment.save()
+            
+            # Create notification for doctor
+            create_notification(
+                appointment.doctor.user_profile,
+                'APPOINTMENT',
+                'Appointment Cancelled',
+                f'Patient {appointment.patient.full_name} has cancelled their appointment scheduled for {appointment.appointment_date}.',
+                None
+            )
+            
             messages.success(request, 'Appointment cancelled successfully!')
         else:
             messages.error(request, 'You are not authorized to cancel this appointment.')
@@ -877,3 +956,118 @@ def accept_appointment(request, appointment_id):
             
             return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def doctor_all_medical_history(request):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        doctor = Doctor.objects.get(user_profile=user_profile)
+        
+        # Verify that the user is a doctor
+        if user_profile.user_type != 'DOCTOR':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+            
+        # Get search parameters
+        patient_search = request.GET.get('patient_search', '')
+        status_filter = request.GET.get('status', 'all')
+        
+        # Get all patient appointments for this doctor
+        appointments = Appointment.objects.filter(
+            doctor=doctor
+        ).order_by('-appointment_date')
+        
+        # Apply filters if provided
+        if patient_search:
+            appointments = appointments.filter(
+                patient__full_name__icontains=patient_search
+            )
+            
+        if status_filter != 'all' and status_filter in ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']:
+            appointments = appointments.filter(status=status_filter)
+            
+        # Get all unique patients
+        patients = UserProfile.objects.filter(
+            patient_appointments__doctor=doctor
+        ).distinct()
+        
+        # Calculate statistics
+        stats = {
+            'total': appointments.count(),
+            'pending': appointments.filter(status='PENDING').count(),
+            'confirmed': appointments.filter(status='CONFIRMED').count(),
+            'completed': appointments.filter(status='COMPLETED').count(),
+            'cancelled': appointments.filter(status='CANCELLED').count(),
+            'total_patients': patients.count()
+        }
+        
+        context = {
+            'appointments': appointments,
+            'stats': stats,
+            'patients': patients,
+            'user_profile': user_profile,
+            'doctor': doctor,
+            'patient_search': patient_search,
+            'status_filter': status_filter
+        }
+        
+        return render(request, 'myApp/doctor_all_medical_history.html', context)
+        
+    except (UserProfile.DoesNotExist, Doctor.DoesNotExist):
+        messages.error(request, 'Doctor profile not found.')
+        return redirect('login')
+
+@login_required
+def admin_appointments(request):
+    # Check if user is admin
+    if not request.user.is_superuser:
+        messages.error(request, 'You are not authorized to view this page.')
+        return redirect('login')
+    
+    # Get filter parameters
+    patient_search = request.GET.get('patient_search', '')
+    patient_id = request.GET.get('patient_id', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Get all appointments
+    appointments = Appointment.objects.all().order_by('-appointment_date')
+    
+    # Apply filters if provided
+    if patient_search:
+        # Search in patient name, email or phone
+        appointments = appointments.filter(
+            Q(patient__full_name__icontains=patient_search) |
+            Q(patient__user__email__icontains=patient_search) |
+            Q(patient__phone_number__icontains=patient_search)
+        )
+    
+    if patient_id:
+        # Filter by specific patient ID
+        appointments = appointments.filter(patient_id=patient_id)
+        
+    if status_filter and status_filter in ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']:
+        # Filter by appointment status
+        appointments = appointments.filter(status=status_filter)
+    
+    # Get all patients for the modal
+    all_patients = UserProfile.objects.all().order_by('full_name')
+    
+    # Calculate statistics
+    appointment_stats = {
+        'total': appointments.count(),
+        'pending': appointments.filter(status='PENDING').count(),
+        'confirmed': appointments.filter(status='CONFIRMED').count(),
+        'completed': appointments.filter(status='COMPLETED').count(),
+        'cancelled': appointments.filter(status='CANCELLED').count(),
+    }
+    
+    context = {
+        'appointments': appointments,
+        'all_patients': all_patients,
+        'appointment_stats': appointment_stats,
+        'patient_search': patient_search,
+        'patient_id': patient_id,
+        'status_filter': status_filter
+    }
+    
+    return render(request, 'myApp/admin_appointments.html', context)

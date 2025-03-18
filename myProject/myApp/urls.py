@@ -43,4 +43,5 @@ urlpatterns = [
     path('doctor/medical-record/<int:record_id>/', views.view_medical_record, name='view_medical_record'),
     path('doctor/medical-record/<int:record_id>/delete/', views.delete_medical_record, name='delete_medical_record'),
     path('doctor/accept-appointment/<int:appointment_id>/', views.accept_appointment, name='accept_appointment'),
+    path('doctor/all-medical-history/', views.doctor_all_medical_history, name='doctor_all_medical_history'),
 ]

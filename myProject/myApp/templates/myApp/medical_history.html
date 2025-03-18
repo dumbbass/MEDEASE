@@ -9,11 +9,10 @@
     }
 
     .history-card {
-        background: rgba(255, 255, 255, 0.95);
+        background: white;
         border-radius: 20px;
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         padding: 30px;
-        backdrop-filter: blur(10px);
     }
 
     .section-title {
@@ -24,7 +23,7 @@
     }
 
     .appointment-item {
-        background: white;
+        background: #f8fafc;
         border-radius: 15px;
         padding: 20px;
         margin-bottom: 15px;
@@ -47,14 +46,15 @@
     .doctor-info {
         display: flex;
         align-items: center;
-        gap: 15px;
     }
 
     .doctor-avatar {
         width: 50px;
         height: 50px;
         border-radius: 50%;
+        margin-right: 15px;
         object-fit: cover;
+        border: 2px solid #e2e8f0;
     }
 
     .doctor-name {
@@ -68,8 +68,13 @@
         font-size: 0.9rem;
     }
 
+    .appointment-details {
+        margin-top: 10px;
+        color: #4a5568;
+    }
+
     .appointment-status {
-        padding: 5px 12px;
+        padding: 6px 12px;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 500;
@@ -77,17 +82,55 @@
 
     .status-completed {
         background: #c6f6d5;
-        color: #2f855a;
+        color: #22543d;
     }
 
     .status-cancelled {
         background: #fed7d7;
-        color: #c53030;
+        color: #822727;
     }
 
-    .appointment-details {
+    .status-pending {
+        background: #feebc8;
+        color: #744210;
+    }
+
+    .status-confirmed {
+        background: #bee3f8;
+        color: #2b6cb0;
+    }
+
+    /* Appointment stats styling */
+    .appointment-stats {
+        margin-bottom: 30px;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 10px;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: bold;
         color: #4a5568;
-        font-size: 0.95rem;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.9rem;
+        color: #718096;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        color: #4a5568;
         margin-bottom: 15px;
     }
 
@@ -161,9 +204,46 @@
             <div class="col-md-8">
                 <div class="history-card">
                     <h2 class="section-title">Medical History</h2>
+                    
+                    <!-- Add appointment statistics -->
+                    <div class="appointment-stats mb-4">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card shadow-sm mb-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Appointment Summary</h5>
+                                        <div class="d-flex justify-content-between flex-wrap">
+                                            <div class="stat-item">
+                                                <span class="stat-value">{{ stats.total }}</span>
+                                                <span class="stat-label">Total</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-value">{{ stats.pending }}</span>
+                                                <span class="stat-label">Pending</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-value">{{ stats.confirmed }}</span>
+                                                <span class="stat-label">Confirmed</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-value">{{ stats.completed }}</span>
+                                                <span class="stat-label">Completed</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-value">{{ stats.cancelled }}</span>
+                                                <span class="stat-label">Cancelled</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="filter-section">
                         <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="pending">Pending</button>
+                        <button class="filter-btn" data-filter="confirmed">Confirmed</button>
                         <button class="filter-btn" data-filter="completed">Completed</button>
                         <button class="filter-btn" data-filter="cancelled">Cancelled</button>
                     </div>
@@ -193,13 +273,38 @@
                                 <div class="appointment-details">
                                     <strong>Specialization:</strong> {{ appointment.doctor.specialization }}
                                 </div>
+                                {% if appointment.status == "COMPLETED" %}
+                                <div class="appointment-details mt-2">
+                                    <div class="text-success">
+                                        <i class="fas fa-check-circle"></i> This appointment has been completed
+                                    </div>
+                                </div>
+                                {% elif appointment.status == "CANCELLED" %}
+                                <div class="appointment-details mt-2">
+                                    <div class="text-danger">
+                                        <i class="fas fa-times-circle"></i> This appointment was cancelled
+                                    </div>
+                                </div>
+                                {% elif appointment.status == "PENDING" %}
+                                <div class="appointment-details mt-2">
+                                    <div class="text-warning">
+                                        <i class="fas fa-clock"></i> This appointment is pending doctor confirmation
+                                    </div>
+                                </div>
+                                {% elif appointment.status == "CONFIRMED" %}
+                                <div class="appointment-details mt-2">
+                                    <div class="text-primary">
+                                        <i class="fas fa-calendar-check"></i> This appointment is confirmed
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         {% endfor %}
                     {% else %}
                         <div class="no-history">
                             <i class="fas fa-history"></i>
-                            <h4>No Past Appointments</h4>
-                            <p>Your medical history will appear here.</p>
+                            <h4>No Appointments</h4>
+                            <p>Your appointment history will appear here.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -209,23 +314,41 @@
 </div>
 
 <script>
-// Filter functionality
-document.querySelectorAll('.filter-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        // Update active button
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        this.classList.add('active');
+// Initialize appointment counts 
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
 
-        const filter = this.dataset.filter;
-        const appointments = document.querySelectorAll('.appointment-item');
+            const filter = this.dataset.filter;
+            const appointments = document.querySelectorAll('.appointment-item');
 
-        appointments.forEach(appointment => {
-            if (filter === 'all' || appointment.dataset.status === filter) {
-                appointment.style.display = 'block';
-            } else {
-                appointment.style.display = 'none';
-            }
+            appointments.forEach(appointment => {
+                if (filter === 'all' || appointment.dataset.status === filter) {
+                    appointment.style.display = 'block';
+                } else {
+                    appointment.style.display = 'none';
+                }
+            });
         });
+    });
+
+    // Show appropriate status color based on appointment status
+    document.querySelectorAll('.appointment-item').forEach(item => {
+        const status = item.dataset.status;
+        const borderColor = {
+            'pending': '#fbd38d',    // warm yellow
+            'confirmed': '#4299e1',  // blue
+            'completed': '#48bb78',  // green
+            'cancelled': '#f56565'   // red
+        };
+        
+        if (borderColor[status]) {
+            item.style.borderLeftColor = borderColor[status];
+        }
     });
 });
 </script>

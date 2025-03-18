@@ -1,0 +1,257 @@
+{% extends 'myApp/doctor_dashboard.html' %}
+{% load static %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0 text-gray-800">All Patient Medical History</h1>
+            <p class="text-muted">View and manage the medical history of all your patients</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Appointments</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ appointment_stats.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Completed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ appointment_stats.completed }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending/Confirmed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ appointment_stats.pending_confirmed }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Cancelled</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ appointment_stats.cancelled }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Patients</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ appointment_stats.unique_patients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Filter Options</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{% url 'doctor_all_medical_history' %}" class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="patient_search">Search Patient</label>
+                    <input type="text" class="form-control" id="patient_search" name="patient_search" 
+                        placeholder="Name, Email or Phone" value="{{ request.GET.patient_search|default:'' }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="status_filter">Status</label>
+                    <select class="form-control" id="status_filter" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="PENDING" {% if request.GET.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="CONFIRMED" {% if request.GET.status == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+                        <option value="COMPLETED" {% if request.GET.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                        <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'doctor_all_medical_history' %}" class="btn btn-secondary ml-2">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Appointments Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Patient Appointments</h6>
+        </div>
+        <div class="card-body">
+            {% if appointments %}
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Symptoms</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in appointments %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if appointment.patient.user.profile_pic %}
+                                    <img src="{{ appointment.patient.user.profile_pic.url }}" alt="Profile" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
+                                    {% else %}
+                                    <img src="{% static 'myApp/img/default_profile.png' %}" alt="Profile" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
+                                    {% endif %}
+                                    <div>
+                                        <div class="font-weight-bold">{{ appointment.patient.user.first_name }} {{ appointment.patient.user.last_name }}</div>
+                                        <div class="small text-muted">{{ appointment.patient.user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ appointment.appointment_date }}</td>
+                            <td>{{ appointment.appointment_time }}</td>
+                            <td>{{ appointment.symptoms|truncatechars:50 }}</td>
+                            <td>
+                                {% if appointment.status == 'PENDING' %}
+                                <span class="badge badge-warning">Pending</span>
+                                {% elif appointment.status == 'CONFIRMED' %}
+                                <span class="badge badge-primary">Confirmed</span>
+                                {% elif appointment.status == 'COMPLETED' %}
+                                <span class="badge badge-success">Completed</span>
+                                {% elif appointment.status == 'CANCELLED' %}
+                                <span class="badge badge-danger">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'appointment_detail' appointment.id %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if appointment.status == 'PENDING' %}
+                                <a href="{% url 'accept_appointment' appointment.id %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Accept
+                                </a>
+                                {% endif %}
+                                {% if appointment.status == 'CONFIRMED' %}
+                                <button class="btn btn-primary btn-sm mark-completed" data-appointment-id="{{ appointment.id }}">
+                                    <i class="fas fa-clipboard-check"></i> Complete
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x mb-3 text-gray-400"></i>
+                <p class="mb-0">No appointments found.</p>
+                {% if request.GET %}
+                <p>Try adjusting your filters or <a href="{% url 'doctor_all_medical_history' %}">view all appointments</a>.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mark appointment as completed
+        const completeButtons = document.querySelectorAll('.mark-completed');
+        completeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const appointmentId = this.getAttribute('data-appointment-id');
+                if (confirm('Mark this appointment as completed?')) {
+                    fetch(`/doctor/complete-appointment/${appointmentId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Appointment marked as completed!');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred. Please try again.');
+                    });
+                }
+            });
+        });
+
+        // Get CSRF Token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %} 

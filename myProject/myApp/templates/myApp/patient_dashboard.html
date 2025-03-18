@@ -463,6 +463,30 @@
         overflow-y: auto;
         padding-bottom: 20px;
     }
+
+    .btn-action:hover {
+        opacity: 0.8;
+        transform: translateY(-2px);
+    }
+
+    .btn-cancel {
+        background-color: #f56565;
+    }
+
+    .btn-delete {
+        background-color: #718096;
+    }
+    
+    .completed-badge {
+        background-color: #48bb78;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
 </style>
 
 <!-- Add menu toggle button for mobile -->
@@ -555,18 +579,22 @@
                             </span>
                         </div>
                         <div class="appointment-actions">
-                            {% if appointment.status != 'CANCELLED' %}
+                            {% if appointment.status == 'PENDING' or appointment.status == 'CONFIRMED' %}
                                 <button type="button" class="btn-action btn-cancel" 
                                         data-appointment-url="{% url 'cancel_appointment' appointment.id %}"
                                         onclick="showCancelModal(this)">
                                     <i class="fas fa-times"></i> Cancel
                                 </button>
-                            {% else %}
+                            {% elif appointment.status == 'CANCELLED' %}
                                 <button type="button" class="btn-action btn-delete" 
                                         data-appointment-url="{% url 'delete_appointment' appointment.id %}"
                                         onclick="showDeleteModal(this)">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
+                            {% elif appointment.status == 'COMPLETED' %}
+                                <span class="completed-badge">
+                                    <i class="fas fa-check-circle"></i> Completed
+                                </span>
                             {% endif %}
                         </div>
                     </div>
