@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
-from .models import UserProfile, Doctor, Appointment, LoginHistory, Notification, MedicalRecord, Prescription, Medication, DoctorRegistrationCode
+from .models import UserProfile, Doctor, Appointment, LoginHistory, Notification, MedicalRecord, Prescription, Medication, DoctorRegistrationCode, Referral
 
 # Register your models here.
 @admin.register(UserProfile)
@@ -97,3 +97,10 @@ class DoctorRegistrationCodeAdmin(admin.ModelAdmin):
         return {
             'code': ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         }
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ('patient', 'referring_doctor', 'referral_type', 'severity_level', 'date_referred', 'is_confirmed')
+    list_filter = ('referral_type', 'severity_level', 'is_confirmed', 'date_referred')
+    search_fields = ('patient__full_name', 'referring_doctor__user_profile__full_name', 'reason')
+    readonly_fields = ('date_referred', 'confirmation_date')

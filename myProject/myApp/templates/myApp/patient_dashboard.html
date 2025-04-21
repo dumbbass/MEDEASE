@@ -604,6 +604,54 @@
             {% endif %}
         </div>
     </div>
+
+    <div class="dashboard-card">
+        <h3><i class="fas fa-file-medical"></i> Recent Referrals</h3>
+        {% if referrals %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for referral in referrals %}
+                            <tr>
+                                <td>Dr. {{ referral.referring_doctor.user_profile.full_name }}</td>
+                                <td>{{ referral.get_referral_type_display }}</td>
+                                <td>
+                                    <span class="badge severity-{{ referral.severity_level|lower }}">
+                                        {{ referral.get_severity_level_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if referral.is_confirmed %}
+                                        <span class="badge bg-success">Confirmed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ referral.date_referred|date:"F j, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'view_referral' referral.id %}" class="btn btn-sm btn-info">
+                                        View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted">No referrals available</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Add this modal HTML right before the closing body tag -->
@@ -693,6 +741,69 @@ function showDeleteModal(button) {
     modal.show();
 }
 
+// Add form submission handlers
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelForm = document.getElementById('cancelForm');
+    const deleteForm = document.getElementById('deleteForm');
+
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    showToastMessage('Error cancelling appointment', 'danger');
+                }
+            })
+            .catch(error => {
+                showToastMessage('Error cancelling appointment', 'danger');
+            });
+        });
+    }
+
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    showToastMessage('Error deleting appointment', 'danger');
+                }
+            })
+            .catch(error => {
+                showToastMessage('Error deleting appointment', 'danger');
+            });
+        });
+    }
+
+    // Handle Django messages on page load
+    {% if messages %}
+        {% for message in messages %}
+            showToastMessage("{{ message }}", "{{ message.tags }}");
+        {% endfor %}
+    {% endif %}
+});
+
 // Replace the Django template tags in JavaScript with a separate function
 function showToastMessage(message, type) {
     const toastHtml = `
@@ -726,16 +837,5 @@ function showToastMessage(message, type) {
         toastContainer.remove();
     });
 }
-
-// Add this after the main script
-<script>
-    // Handle Django messages on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        {% if messages %}
-            {% for message in messages %}
-                showToastMessage("{{ message }}", "{{ message.tags }}");
-            {% endfor %}
-        {% endif %}
-    });
 </script>
 {% endblock %} 

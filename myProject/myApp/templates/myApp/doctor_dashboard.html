@@ -213,6 +213,23 @@
         background: #38a169;
         transform: translateY(-2px);
     }
+
+    .severity-mild {
+        background-color: #c6f6d5;
+        color: #2f855a;
+    }
+    .severity-moderate {
+        background-color: #feebc8;
+        color: #9c4221;
+    }
+    .severity-severe {
+        background-color: #fed7d7;
+        color: #c53030;
+    }
+    .severity-critical {
+        background-color: #feb2b2;
+        color: #9b2c2c;
+    }
 </style>
 
 <!-- Sidenav -->
@@ -320,13 +337,75 @@
                     <p class="text-center text-muted">No appointments scheduled for today</p>
                 {% endif %}
             </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-file-medical"></i> Recent Referrals</h3>
+                {% if referrals %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for referral in referrals %}
+                                    <tr>
+                                        <td>{{ referral.patient.full_name }}</td>
+                                        <td>{{ referral.get_referral_type_display }}</td>
+                                        <td>
+                                            <span class="badge severity-{{ referral.severity_level|lower }}">
+                                                {{ referral.get_severity_level_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if referral.is_confirmed %}
+                                                <span class="badge bg-success">Confirmed</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ referral.date_referred|date:"F j, Y" }}</td>
+                                        <td>
+                                            <a href="{% url 'view_referral' referral.id %}" class="btn btn-sm btn-info">
+                                                View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No referrals created yet</p>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'create_referral' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Referral
+                    </a>
+                </div>
+            </div>
+
+            <div class="dashboard-links">
+                <a href="{% url 'doctor_calendar' %}" class="dashboard-link">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Calendar</span>
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Add toast container -->
 <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 // Mobile menu toggle
 function toggleNav() {
@@ -439,29 +518,30 @@ function acceptAppointment(appointmentId) {
 }
 
 function showToast(message, type) {
-    const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" 
-             role="alert" 
-             aria-live="assertive" 
-             aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    const toastContainer = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
             </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
     
-    const toastContainer = document.querySelector('.toast-container');
-    toastContainer.innerHTML = toastHtml;
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
     
-    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'), {
-        autohide: true,
-        delay: 3000
+    // Remove the toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
     });
-    toast.show();
 }
 </script>
-{% endblock %} 
+{% endblock %}

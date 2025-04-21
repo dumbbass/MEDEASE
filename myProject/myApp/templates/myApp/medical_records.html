@@ -1,4 +1,5 @@
 {% extends 'myApp/base.html' %}
+{% load custom_filters %}
 
 {% block content %}
 <style>
@@ -97,6 +98,16 @@
         transform: translateY(-2px);
     }
 
+    .btn-delete {
+        background: #fc8181;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #f56565;
+        transform: translateY(-2px);
+    }
+
     .back-button {
         display: inline-flex;
         align-items: center;
@@ -143,111 +154,248 @@
         color: #2d3748;
         margin-bottom: 15px;
     }
+
+    .add-record-btn {
+        background: #667eea;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .add-record-btn:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .modal-content {
+        border-radius: 15px;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #edf2f7;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
 </style>
 
 <div class="records-container">
     <div class="container">
-        <a href="{% url 'patient_dashboard' %}" class="back-button">
+        <a href="{% if is_patient %}{% url 'patient_dashboard' %}{% else %}{% url 'doctor_dashboard' %}{% endif %}" class="back-button">
             <i class="fas fa-arrow-left"></i> Back to Dashboard
         </a>
 
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="records-card">
-                    <h2 class="section-title">Medical Records</h2>
-
-                    <div class="record-category">
-                        <h3 class="category-title">Test Results</h3>
+                    <h2 class="text-center mb-4">Medical Records</h2>
+                    
+                    {% if not is_patient %}
+                        <button type="button" class="add-record-btn" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+                            <i class="fas fa-plus"></i> Add New Record
+                        </button>
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <input type="text" id="recordSearch" class="form-control" placeholder="Search records...">
+                    </div>
+                    
+                    {% for record in records %}
                         <div class="record-item">
                             <div class="record-header">
                                 <div>
-                                    <div class="record-type">Blood Test Results</div>
-                                    <div class="record-date">February 15, 2025</div>
+                                    <div class="record-type">{{ record.get_record_type_display }}</div>
+                                    <div class="record-date">{{ record.date_created|date:"F d, Y" }}</div>
                                 </div>
+                                {% if not is_patient %}
+                                    <div class="record-actions">
+                                        <button class="action-btn btn-delete" onclick="deleteRecord({{ record.id }})">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="record-details">
-                                Complete Blood Count (CBC) and Basic Metabolic Panel
+                                <h5>{{ record.title }}</h5>
+                                <p>{{ record.description }}</p>
+                                {% if record.file_attachment %}
+                                    <a href="{{ record.file_attachment.url }}" class="action-btn btn-download" target="_blank">
+                                        <i class="fas fa-download"></i> Download File
+                                    </a>
+                                {% endif %}
                             </div>
-                            <div class="record-actions">
-                                <button class="action-btn btn-download">
-                                    <i class="fas fa-download"></i> Download PDF
-                                </button>
-                                <button class="action-btn btn-view">
-                                    <i class="fas fa-eye"></i> View Results
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-category">
-                        <h3 class="category-title">Imaging Reports</h3>
-                        <div class="record-item">
-                            <div class="record-header">
-                                <div>
-                                    <div class="record-type">Chest X-Ray</div>
-                                    <div class="record-date">February 10, 2025</div>
+                            {% if not is_patient %}
+                                <div class="record-info">
+                                    <small>Patient: {{ record.patient.full_name }}</small>
                                 </div>
-                            </div>
-                            <div class="record-details">
-                                Routine chest examination
-                            </div>
-                            <div class="record-actions">
-                                <button class="action-btn btn-download">
-                                    <i class="fas fa-download"></i> Download Report
-                                </button>
-                                <button class="action-btn btn-view">
-                                    <i class="fas fa-eye"></i> View Images
-                                </button>
-                            </div>
+                            {% endif %}
                         </div>
-                    </div>
-
-                    <div class="record-category">
-                        <h3 class="category-title">Vaccination Records</h3>
-                        <div class="record-item">
-                            <div class="record-header">
-                                <div>
-                                    <div class="record-type">COVID-19 Vaccination</div>
-                                    <div class="record-date">January 15, 2025</div>
-                                </div>
-                            </div>
-                            <div class="record-details">
-                                Booster Shot - Third Dose
-                            </div>
-                            <div class="record-actions">
-                                <button class="action-btn btn-download">
-                                    <i class="fas fa-download"></i> Download Certificate
-                                </button>
-                                <button class="action-btn btn-view">
-                                    <i class="fas fa-eye"></i> View Details
-                                </button>
-                            </div>
+                    {% empty %}
+                        <div class="no-records">
+                            <i class="fas fa-file-medical"></i>
+                            <h4>No Medical Records</h4>
+                            <p>{% if is_patient %}Your medical records will appear here.{% else %}No medical records have been created yet.{% endif %}</p>
                         </div>
-                    </div>
-
-                    <!-- If no records -->
-                    <!-- <div class="no-records">
-                        <i class="fas fa-file-medical"></i>
-                        <h4>No Medical Records</h4>
-                        <p>Your medical records will appear here.</p>
-                    </div> -->
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+{% if not is_patient %}
+<!-- Add Record Modal -->
+<div class="modal fade" id="addRecordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Medical Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRecordForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Patient</label>
+                        <input type="text" id="patientSearch" class="form-control mb-2" placeholder="Search patients...">
+                        <select name="patient" class="form-control" required>
+                            <option value="">Select Patient</option>
+                            {% for patient in patients %}
+                                <option value="{{ patient.id }}" data-name="{{ patient.full_name }}">{{ patient.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Record Type</label>
+                        <select name="record_type" class="form-control" required>
+                            <option value="TEST">Test Results</option>
+                            <option value="PRESCRIPTION">Prescription</option>
+                            <option value="DIAGNOSIS">Diagnosis</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">File Attachment (Optional)</label>
+                        <input type="file" name="file_attachment" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitRecord()">Add Record</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
-document.querySelectorAll('.btn-download').forEach(button => {
-    button.addEventListener('click', function() {
-        alert('Download functionality will be implemented soon!');
+document.getElementById('recordSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const recordItems = document.querySelectorAll('.record-item');
+    
+    recordItems.forEach(item => {
+        const recordType = item.querySelector('.record-type').textContent.toLowerCase();
+        const recordTitle = item.querySelector('h5').textContent.toLowerCase();
+        const recordDescription = item.querySelector('p').textContent.toLowerCase();
+        const recordDate = item.querySelector('.record-date').textContent.toLowerCase();
+        
+        if (recordType.includes(searchTerm) || 
+            recordTitle.includes(searchTerm) || 
+            recordDescription.includes(searchTerm) ||
+            recordDate.includes(searchTerm)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
     });
 });
 
-document.querySelectorAll('.btn-view').forEach(button => {
-    button.addEventListener('click', function() {
-        alert('View details functionality will be implemented soon!');
+{% if not is_patient %}
+document.getElementById('patientSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const patientOptions = document.querySelectorAll('select[name="patient"] option');
+    
+    patientOptions.forEach(option => {
+        if (option.value === '') return; // Skip the placeholder option
+        
+        const patientName = option.getAttribute('data-name').toLowerCase();
+        if (patientName.includes(searchTerm)) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
     });
 });
+
+function submitRecord() {
+    const form = document.getElementById('addRecordForm');
+    const formData = new FormData(form);
+    
+    fetch('{% url "doctor_medical_records" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error submitting record: ' + error);
+    });
+}
+
+function deleteRecord(recordId) {
+    if (confirm('Are you sure you want to delete this record?')) {
+        fetch(`/delete-medical-record/${recordId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Error deleting record');
+            }
+        })
+        .catch(error => {
+            alert('Error deleting record: ' + error);
+        });
+    }
+}
+{% endif %}
 </script>
 {% endblock %} 

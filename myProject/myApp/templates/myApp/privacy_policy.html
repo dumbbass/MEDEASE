@@ -1,0 +1,160 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .privacy-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .privacy-header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #edf2f7;
+    }
+
+    .privacy-section {
+        margin-bottom: 30px;
+    }
+
+    .privacy-section h2 {
+        color: #2d3748;
+        margin-bottom: 15px;
+        font-size: 1.5rem;
+    }
+
+    .privacy-section h3 {
+        color: #4a5568;
+        margin: 20px 0 10px;
+        font-size: 1.2rem;
+    }
+
+    .privacy-section p {
+        color: #4a5568;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    .privacy-section ul {
+        padding-left: 20px;
+        margin-bottom: 15px;
+    }
+
+    .privacy-section li {
+        margin-bottom: 10px;
+        color: #4a5568;
+    }
+
+    .last-updated {
+        text-align: center;
+        color: #718096;
+        font-size: 0.9rem;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #edf2f7;
+    }
+</style>
+
+<div class="privacy-container">
+    <div class="privacy-header">
+        <h1>Data Privacy and Confidentiality Policy</h1>
+        <p class="text-muted">Last Updated: {% now "F j, Y" %}</p>
+    </div>
+
+    <div class="privacy-section">
+        <h2>1. Introduction</h2>
+        <p>At MedEase, we are committed to protecting your privacy and maintaining the confidentiality of your personal and medical information. This policy outlines how we collect, use, and safeguard your data in compliance with applicable laws and regulations.</p>
+    </div>
+
+    <div class="privacy-section">
+        <h2>2. Information We Collect</h2>
+        <h3>2.1 Personal Information</h3>
+        <ul>
+            <li>Name, contact details, and identification information</li>
+            <li>Medical history and health records</li>
+            <li>Appointment and treatment information</li>
+            <li>Payment and insurance details</li>
+        </ul>
+
+        <h3>2.2 Usage Data</h3>
+        <ul>
+            <li>Website and application usage patterns</li>
+            <li>Device and browser information</li>
+            <li>IP addresses and location data</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>3. How We Use Your Information</h2>
+        <ul>
+            <li>To provide and manage healthcare services</li>
+            <li>To process appointments and medical records</li>
+            <li>To communicate with you about your healthcare</li>
+            <li>To improve our services and user experience</li>
+            <li>To comply with legal and regulatory requirements</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>4. Data Security</h2>
+        <p>We implement appropriate technical and organizational measures to protect your data, including:</p>
+        <ul>
+            <li>Encryption of sensitive information</li>
+            <li>Secure data storage and transmission</li>
+            <li>Regular security assessments</li>
+            <li>Access controls and authentication</li>
+            <li>Staff training on data protection</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>5. Confidentiality</h2>
+        <p>All healthcare providers and staff are bound by strict confidentiality agreements. Your medical information will only be shared with:</p>
+        <ul>
+            <li>Healthcare professionals directly involved in your care</li>
+            <li>Authorized third parties with your explicit consent</li>
+            <li>Legal authorities when required by law</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>6. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li>Access your personal and medical information</li>
+            <li>Request corrections to your data</li>
+            <li>Withdraw consent for data processing</li>
+            <li>Request deletion of your data (subject to legal requirements)</li>
+            <li>Receive a copy of your data in a portable format</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>7. Data Retention</h2>
+        <p>We retain your information for as long as necessary to:</p>
+        <ul>
+            <li>Provide healthcare services</li>
+            <li>Comply with legal requirements</li>
+            <li>Resolve disputes</li>
+            <li>Enforce our agreements</li>
+        </ul>
+    </div>
+
+    <div class="privacy-section">
+        <h2>8. Contact Us</h2>
+        <p>If you have any questions about this policy or wish to exercise your rights, please contact our Data Protection Officer at:</p>
+        <p>Email: privacy@medease.com<br>
+        Phone: (555) 123-4567<br>
+        Address: 123 Medical Center Drive, Healthcare City</p>
+    </div>
+
+    <div class="last-updated">
+        <p>This policy is subject to periodic review and updates. Please check back regularly for any changes.</p>
+    </div>
+</div>
+{% endblock %} 

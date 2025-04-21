@@ -289,10 +289,11 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Patient</label>
+                        <input type="text" id="patientSearch" class="form-control mb-2" placeholder="Search patients...">
                         <select name="patient" class="form-control" required>
                             <option value="">Select Patient</option>
                             {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                <option value="{{ patient.id }}" data-name="{{ patient.full_name }}">{{ patient.full_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -449,5 +450,21 @@ function deleteRecord(recordId) {
         });
     }
 }
+
+document.getElementById('patientSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const patientSelect = document.querySelector('select[name="patient"]');
+    const options = patientSelect.querySelectorAll('option');
+    
+    options.forEach(option => {
+        if (option.value === '') return; // Skip the placeholder option
+        const patientName = option.getAttribute('data-name').toLowerCase();
+        if (patientName.includes(searchTerm)) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+});
 </script>
 {% endblock %} 

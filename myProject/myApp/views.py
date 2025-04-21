@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord, DoctorRegistrationCode
+from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord, DoctorRegistrationCode, Referral, Payment
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -17,6 +17,8 @@ from django.utils.timesince import timesince
 from django.conf import settings
 from django.urls import reverse
 from django.db.models import Q
+from django.views.decorators.http import require_POST
+from django.db import models
 
 def home(request):
     # Get or create a profile
@@ -267,6 +269,7 @@ def register_view(request):
                         specialization=request.POST.get('specialization', ''),
                         experience=int(request.POST.get('experience', 0) or 0),
                         qualification=request.POST.get('qualification', ''),
+                        prc_license=request.POST.get('prc_license', ''),
                         consultation_fee=float(request.POST.get('consultation_fee', 0) or 0),
                         available_days=available_days,
                         available_time=request.POST.get('available_time_start', '') + ' - ' + request.POST.get('available_time_end', '')
@@ -355,6 +358,11 @@ def patient_dashboard(request):
             appointment_date__gte=timezone.now().date()
         ).order_by('appointment_date', 'appointment_time')
 
+        # Get recent referrals for the patient
+        referrals = Referral.objects.filter(
+            patient=user_profile
+        ).order_by('-date_referred')[:5]  # Show last 5 referrals
+
         # Add unread notifications count
         unread_notifications_count = Notification.objects.filter(
             user=user_profile,
@@ -364,6 +372,7 @@ def patient_dashboard(request):
         context = {
             'user_profile': user_profile,
             'appointments': appointments,
+            'referrals': referrals,
             'unread_notifications_count': unread_notifications_count
         }
         
@@ -377,18 +386,29 @@ def book_appointment(request):
     if request.method == 'POST':
         doctor_id = request.POST.get('doctor')
         appointment_date = request.POST.get('appointment_date')
+        appointment_time = request.POST.get('appointment_time')  # Get the selected time slot
         reason = request.POST.get('reason')
+
+        # Validate that the appointment date is not in the past
+        try:
+            selected_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+            if selected_date < timezone.now().date():
+                messages.error(request, 'Cannot book appointments in the past.')
+                return redirect('book_appointment')
+        except ValueError:
+            messages.error(request, 'Invalid date format.')
+            return redirect('book_appointment')
 
         try:
             doctor = Doctor.objects.get(id=doctor_id)
             user_profile = UserProfile.objects.get(user=request.user)
 
-            # Create the appointment
+            # Create the appointment with the selected time
             appointment = Appointment.objects.create(
                 patient=user_profile,
                 doctor=doctor,
                 appointment_date=appointment_date,
-                appointment_time='09:00',  # Default time, you can make this selectable
+                appointment_time=appointment_time,  # Use the selected time
                 reason=reason,
                 status='PENDING'
             )
@@ -398,7 +418,7 @@ def book_appointment(request):
                 user_profile,
                 'APPOINTMENT',
                 'Appointment Booked',
-                f'Your appointment with Dr. {doctor.user_profile.full_name} has been scheduled for {appointment_date}.',
+                f'Your appointment with Dr. {doctor.user_profile.full_name} has been scheduled for {appointment_date} at {appointment_time}.',
                 f'/appointments/{appointment.id}/'
             )
 
@@ -411,50 +431,14 @@ def book_appointment(request):
 
     # For GET request
     doctors = Doctor.objects.all()
+    # Set min_date to today's date in the correct format
+    min_date = timezone.now().date().strftime('%Y-%m-%d')
     
-    # If no doctors exist, create a dummy doctor
-    if not doctors.exists():
-        # Create dummy user if it doesn't exist
-        dummy_user, created = User.objects.get_or_create(
-            username='dummydoctor',
-            defaults={
-                'email': 'dummy@doctor.com',
-            }
-        )
-        if created:
-            dummy_user.set_password('dummypass123')
-            dummy_user.save()
-
-        # Create dummy user profile
-        dummy_profile, created = UserProfile.objects.get_or_create(
-            user=dummy_user,
-            defaults={
-                'user_type': 'DOCTOR',
-                'full_name': 'Dr. John Smith'
-            }
-        )
-
-        # Create dummy doctor
-        doctor, created = Doctor.objects.get_or_create(
-            user_profile=dummy_profile,
-            defaults={
-                'specialization': 'General Medicine',
-                'experience': 10,
-                'qualification': 'MD',
-                'consultation_fee': 100.00,
-                'available_days': 'Monday-Friday',
-                'available_time': '9:00 AM - 5:00 PM'
-            }
-        )
-        
-        doctors = Doctor.objects.all()
-
-    min_date = datetime.now().date()
-    
-    return render(request, 'myApp/book_appointment.html', {
+    context = {
         'doctors': doctors,
-        'min_date': min_date
-    })
+        'min_date': min_date,
+    }
+    return render(request, 'myApp/book_appointment.html', context)
 
 @login_required
 def medical_history(request):
@@ -538,7 +522,30 @@ def delete_appointment(request, appointment_id):
 
 @login_required
 def medical_records(request):
-    return render(request, 'myApp/medical_records.html')
+    user_profile = UserProfile.objects.get(user=request.user)
+    
+    if user_profile.user_type == 'PATIENT':
+        # Patient view - show all their records
+        records = MedicalRecord.objects.filter(patient=user_profile)
+        context = {
+            'records': records,
+            'user_profile': user_profile,
+            'is_patient': True
+        }
+    else:
+        # Doctor view - show all records they created
+        doctor = Doctor.objects.get(user_profile=user_profile)
+        records = MedicalRecord.objects.filter(doctor=doctor)
+        patients = UserProfile.objects.filter(patient_appointments__doctor=doctor).distinct()
+        context = {
+            'records': records,
+            'patients': patients,
+            'user_profile': user_profile,
+            'doctor': doctor,
+            'is_patient': False
+        }
+    
+    return render(request, 'myApp/medical_records.html', context)
 
 @login_required
 def prescriptions(request):
@@ -569,7 +576,81 @@ def view_prescription(request, prescription_id):
 
 @login_required
 def payments(request):
-    return render(request, 'myApp/payments.html')
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'PATIENT':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+
+        # Get all appointments with payments
+        appointments = Appointment.objects.filter(
+            patient=user_profile
+        ).prefetch_related('payments').order_by('-appointment_date')
+
+        # Calculate payment statistics
+        total_paid = Payment.objects.filter(
+            appointment__patient=user_profile,
+            status='COMPLETED'
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+        pending_payments = Payment.objects.filter(
+            appointment__patient=user_profile,
+            status='PENDING'
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+        if request.method == 'POST':
+            try:
+                appointment_id = request.POST.get('appointment')
+                amount = float(request.POST.get('amount'))
+                payment_method = request.POST.get('payment_method')
+                transaction_id = request.POST.get('transaction_id')
+                notes = request.POST.get('notes')
+
+                appointment = Appointment.objects.get(id=appointment_id, patient=user_profile)
+
+                # Create payment record
+                payment = Payment.objects.create(
+                    appointment=appointment,
+                    amount=amount,
+                    payment_method=payment_method,
+                    transaction_id=transaction_id if payment_method == 'ONLINE' else None,
+                    processed_by=user_profile,
+                    notes=notes,
+                    status='PENDING'  # Payment will be confirmed by secretary
+                )
+
+                # Create notification for secretary
+                secretary = UserProfile.objects.filter(user_type='SECRETARY').first()
+                if secretary:
+                    create_notification(
+                        secretary,
+                        'PAYMENT',
+                        'New Payment Pending',
+                        f'Patient {user_profile.full_name} has submitted a payment of ${amount} for appointment #{appointment.id}.',
+                        f'/payments/{payment.id}/'
+                    )
+
+                messages.success(request, 'Payment submitted successfully! It will be processed by our staff.')
+                return redirect('payments')
+
+            except ValueError:
+                messages.error(request, 'Invalid amount entered.')
+            except Appointment.DoesNotExist:
+                messages.error(request, 'Appointment not found.')
+            except Exception as e:
+                messages.error(request, f'Error processing payment: {str(e)}')
+
+        context = {
+            'appointments': appointments,
+            'total_paid': total_paid,
+            'pending_payments': pending_payments,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/payments.html', context)
+
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
 
 @login_required
 def notifications(request):
@@ -685,6 +766,11 @@ def doctor_dashboard(request):
         appointment_date=today
     ).order_by('appointment_time')
     
+    # Get recent referrals
+    referrals = Referral.objects.filter(
+        referring_doctor=doctor
+    ).order_by('-date_referred')[:5]  # Show last 5 referrals
+    
     context = {
         'user_profile': user_profile,
         'doctor': doctor,
@@ -693,7 +779,8 @@ def doctor_dashboard(request):
         'total_patients': Appointment.objects.filter(doctor=doctor).values('patient').distinct().count(),
         'pending_appointments': Appointment.objects.filter(doctor=doctor, status='PENDING').count(),
         'completed_appointments': Appointment.objects.filter(doctor=doctor, status='COMPLETED').count(),
-        'unread_notifications_count': Notification.objects.filter(user=user_profile, is_read=False).count()
+        'unread_notifications_count': Notification.objects.filter(user=user_profile, is_read=False).count(),
+        'referrals': referrals
     }
     
     return render(request, 'myApp/doctor_dashboard.html', context)
@@ -893,6 +980,7 @@ def doctor_settings(request):
             doctor.specialization = request.POST.get('specialization')
             doctor.experience = request.POST.get('experience')
             doctor.qualification = request.POST.get('qualification')
+            doctor.prc_license = request.POST.get('prc_license')
             doctor.consultation_fee = request.POST.get('consultation_fee')
             doctor.available_days = request.POST.get('available_days', '').strip()
             doctor.available_time = request.POST.get('available_time', '')
@@ -1071,3 +1159,567 @@ def admin_appointments(request):
     }
     
     return render(request, 'myApp/admin_appointments.html', context)
+
+@login_required
+def appointments_module(request):
+    if request.user.user_type == 'PATIENT':
+        appointments = Appointment.objects.filter(patient=request.user.patient_profile)
+    elif request.user.user_type == 'DOCTOR':
+        appointments = Appointment.objects.filter(doctor=request.user.doctor_profile)
+    else:
+        appointments = Appointment.objects.all()
+    
+    doctors = Doctor.objects.all()
+    min_date = timezone.now().date()
+    
+    context = {
+        'appointments': appointments,
+        'doctors': doctors,
+        'min_date': min_date,
+    }
+    return render(request, 'myApp/appointments_module.html', context)
+
+@login_required
+@require_POST
+def confirm_appointment(request, appointment_id):
+    try:
+        # Get the appointment
+        appointment = Appointment.objects.get(id=appointment_id)
+        
+        # Get the doctor profile
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'DOCTOR':
+            return JsonResponse({'status': 'error', 'message': 'Only doctors can confirm appointments'}, status=403)
+            
+        doctor = Doctor.objects.get(user_profile=user_profile)
+        
+        # Verify this is the doctor's appointment
+        if appointment.doctor != doctor:
+            return JsonResponse({'status': 'error', 'message': 'You can only confirm your own appointments'}, status=403)
+            
+        # Only allow confirming pending appointments
+        if appointment.status != 'PENDING':
+            return JsonResponse({'status': 'error', 'message': 'Only pending appointments can be confirmed'}, status=400)
+            
+        # Update appointment status
+        appointment.status = 'CONFIRMED'
+        appointment.save()
+        
+        # Create notification for patient
+        create_notification(
+            appointment.patient,
+            'APPOINTMENT',
+            'Appointment Confirmed',
+            f'Dr. {doctor.user_profile.full_name} has confirmed your appointment for {appointment.appointment_date}.',
+            f'/appointments/{appointment.id}/'
+        )
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Appointment.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Appointment not found'}, status=404)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User profile not found'}, status=404)
+    except Doctor.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Doctor profile not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def cancel_appointment(request, appointment_id):
+    try:
+        appointment = Appointment.objects.get(id=appointment_id)
+        if (request.user.user_type == 'DOCTOR' and appointment.doctor == request.user.doctor_profile) or \
+           (request.user.user_type == 'PATIENT' and appointment.patient == request.user.patient_profile):
+            appointment.status = 'CANCELLED'
+            appointment.save()
+            return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    except Appointment.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Appointment not found'}, status=404)
+
+@login_required
+@require_POST
+def reschedule_appointment(request, appointment_id):
+    try:
+        appointment = Appointment.objects.get(id=appointment_id)
+        if (request.user.user_type == 'DOCTOR' and appointment.doctor == request.user.doctor_profile) or \
+           (request.user.user_type == 'PATIENT' and appointment.patient == request.user.patient_profile):
+            new_date = request.POST.get('date')
+            new_time = request.POST.get('time')
+            if new_date and new_time:
+                appointment.date = new_date
+                appointment.time = new_time
+                appointment.status = 'PENDING'
+                appointment.save()
+                return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'error', 'message': 'Invalid date or time'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    except Appointment.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Appointment not found'}, status=404)
+
+@login_required
+def doctor_calendar(request):
+    # Check if user is a doctor
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'DOCTOR':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+            
+        doctor = Doctor.objects.get(user_profile=user_profile)
+        
+        # Get date range for calendar
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        if start_date and end_date:
+            # API endpoint for calendar data
+            appointments = Appointment.objects.filter(
+                doctor=doctor,
+                appointment_date__range=[start_date, end_date]
+            ).order_by('appointment_date', 'appointment_time')
+            
+            appointments_data = [{
+                'id': apt.id,
+                'date': apt.appointment_date.strftime('%Y-%m-%d'),
+                'time': apt.appointment_time.strftime('%I:%M %p'),
+                'patient_name': apt.patient.full_name,
+                'reason': apt.reason,
+                'status': apt.status
+            } for apt in appointments]
+            
+            return JsonResponse({
+                'status': 'success',
+                'appointments': appointments_data
+            })
+        
+        return render(request, 'myApp/doctor_calendar.html', {
+            'user_profile': user_profile,
+            'doctor': doctor
+        })
+        
+    except (UserProfile.DoesNotExist, Doctor.DoesNotExist):
+        messages.error(request, 'Doctor profile not found.')
+        return redirect('login')
+
+@login_required
+def get_available_slots(request):
+    try:
+        doctor_id = request.GET.get('doctor')
+        date = request.GET.get('date')
+        
+        if not doctor_id or not date:
+            return JsonResponse({'status': 'error', 'message': 'Doctor ID and date are required'}, status=400)
+            
+        # Get all appointments for the selected doctor and date
+        appointments = Appointment.objects.filter(
+            doctor_id=doctor_id,
+            appointment_date=date,
+            status__in=['PENDING', 'CONFIRMED']
+        )
+        
+        # Get booked time slots
+        booked_slots = [apt.appointment_time.strftime('%H:%M') for apt in appointments]
+        
+        return JsonResponse({
+            'status': 'success',
+            'booked_slots': booked_slots
+        })
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def create_referral(request):
+    if request.method == 'POST':
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            if user_profile.user_type != 'DOCTOR':
+                messages.error(request, 'Only doctors can create referrals.')
+                return redirect('doctor_dashboard')
+                
+            doctor = Doctor.objects.get(user_profile=user_profile)
+            patient = UserProfile.objects.get(id=request.POST.get('patient'))
+            
+            referral = Referral.objects.create(
+                patient=patient,
+                referring_doctor=doctor,
+                referral_type=request.POST.get('referral_type'),
+                severity_level=request.POST.get('severity_level'),
+                reason=request.POST.get('reason'),
+                notes=request.POST.get('notes'),
+                hospital_name=request.POST.get('hospital_name'),
+                hospital_address=request.POST.get('hospital_address'),
+                expected_duration=request.POST.get('expected_duration')
+            )
+            
+            # Create notification for patient
+            create_notification(
+                patient,
+                'REFERRAL',
+                'New Referral Created',
+                f'Dr. {doctor.user_profile.full_name} has created a referral for you.',
+                f'/referrals/{referral.id}/'
+            )
+            
+            messages.success(request, 'Referral created successfully!')
+            return redirect('doctor_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating referral: {str(e)}')
+            return redirect('create_referral')
+    
+    # For GET request
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'DOCTOR':
+            messages.error(request, 'Only doctors can create referrals.')
+            return redirect('doctor_dashboard')
+            
+        doctor = Doctor.objects.get(user_profile=user_profile)
+        patients = UserProfile.objects.filter(
+            patient_appointments__doctor=doctor
+        ).distinct()
+        
+        return render(request, 'myApp/doctor_referral.html', {
+            'patients': patients,
+            'user_profile': user_profile,
+            'doctor': doctor
+        })
+        
+    except (UserProfile.DoesNotExist, Doctor.DoesNotExist):
+        messages.error(request, 'Doctor profile not found.')
+        return redirect('login')
+
+@login_required
+def view_referral(request, referral_id):
+    try:
+        referral = Referral.objects.get(id=referral_id)
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        # Check if user is authorized to view this referral
+        if user_profile.user_type == 'DOCTOR':
+            if referral.referring_doctor.user_profile != user_profile:
+                messages.error(request, 'You are not authorized to view this referral.')
+                return redirect('doctor_dashboard')
+        else:  # Patient
+            if referral.patient != user_profile:
+                messages.error(request, 'You are not authorized to view this referral.')
+                return redirect('patient_dashboard')
+        
+        return render(request, 'myApp/view_referral.html', {
+            'referral': referral,
+            'user_profile': user_profile
+        })
+        
+    except Referral.DoesNotExist:
+        messages.error(request, 'Referral not found.')
+        return redirect('doctor_dashboard' if request.user.userprofile.user_type == 'DOCTOR' else 'patient_dashboard')
+
+@login_required
+def confirm_referral(request, referral_id):
+    if request.method == 'POST':
+        try:
+            referral = Referral.objects.get(id=referral_id)
+            user_profile = UserProfile.objects.get(user=request.user)
+            
+            # Only patients can confirm referrals
+            if user_profile.user_type != 'PATIENT' or referral.patient != user_profile:
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+                
+            referral.is_confirmed = True
+            referral.confirmation_date = timezone.now()
+            referral.save()
+            
+            # Create notification for doctor
+            create_notification(
+                referral.referring_doctor.user_profile,
+                'REFERRAL',
+                'Referral Confirmed',
+                f'Patient {user_profile.full_name} has confirmed your referral.',
+                f'/referrals/{referral.id}/'
+            )
+            
+            return JsonResponse({'status': 'success'})
+            
+        except Referral.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Referral not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+@login_required
+def privacy_policy(request):
+    return render(request, 'myApp/privacy_policy.html')
+
+@login_required
+def payment_management(request):
+    # Check if user is a secretary
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'SECRETARY':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    method_filter = request.GET.get('method', '')
+    date_filter = request.GET.get('date', '')
+
+    # Get all payments
+    payments = Payment.objects.all().order_by('-payment_date')
+
+    # Apply filters
+    if status_filter:
+        payments = payments.filter(status=status_filter)
+    if method_filter:
+        payments = payments.filter(payment_method=method_filter)
+    if date_filter:
+        payments = payments.filter(payment_date__date=date_filter)
+
+    # Calculate payment statistics
+    total_payments = payments.aggregate(total=models.Sum('amount'))['total'] or 0
+    pending_payments = payments.filter(status='PENDING').aggregate(total=models.Sum('amount'))['total'] or 0
+    completed_payments = payments.filter(status='COMPLETED').aggregate(total=models.Sum('amount'))['total'] or 0
+
+    context = {
+        'payments': payments,
+        'total_payments': total_payments,
+        'pending_payments': pending_payments,
+        'completed_payments': completed_payments,
+    }
+    return render(request, 'myApp/payment_management.html', context)
+
+@login_required
+def process_patient_payment(request, appointment_id):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'PATIENT':
+            messages.error(request, 'You are not authorized to process payments.')
+            return redirect('login')
+
+        appointment = Appointment.objects.get(id=appointment_id, patient=user_profile)
+        
+        if request.method == 'POST':
+            try:
+                amount = float(request.POST.get('amount'))
+                payment_method = request.POST.get('payment_method')
+                transaction_id = request.POST.get('transaction_id')
+                notes = request.POST.get('notes')
+
+                # Create payment record
+                payment = Payment.objects.create(
+                    appointment=appointment,
+                    amount=amount,
+                    payment_method=payment_method,
+                    transaction_id=transaction_id if payment_method == 'ONLINE' else None,
+                    processed_by=user_profile,
+                    notes=notes,
+                    status='PENDING'  # Payment will be confirmed by secretary
+                )
+
+                # Create notification for secretary
+                secretary = UserProfile.objects.filter(user_type='SECRETARY').first()
+                if secretary:
+                    create_notification(
+                        secretary,
+                        'PAYMENT',
+                        'New Payment Pending',
+                        f'Patient {user_profile.full_name} has submitted a payment of ${amount} for appointment #{appointment.id}.',
+                        f'/payments/{payment.id}/'
+                    )
+
+                messages.success(request, 'Payment submitted successfully! It will be processed by our staff.')
+                return redirect('patient_payments')
+
+            except ValueError:
+                messages.error(request, 'Invalid amount entered.')
+            except Exception as e:
+                messages.error(request, f'Error processing payment: {str(e)}')
+
+        context = {
+            'appointment': appointment,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/process_patient_payment.html', context)
+
+    except (UserProfile.DoesNotExist, Appointment.DoesNotExist):
+        messages.error(request, 'Appointment not found.')
+        return redirect('patient_payments')
+
+@login_required
+def view_payment(request, payment_id):
+    # Check if user is authorized (secretary, doctor, or patient)
+    try:
+        payment = Payment.objects.get(id=payment_id)
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        # Check authorization
+        if user_profile.user_type != 'SECRETARY' and \
+           user_profile != payment.appointment.patient and \
+           user_profile != payment.appointment.doctor.user_profile:
+            messages.error(request, 'You are not authorized to view this payment.')
+            return redirect('login')
+            
+        context = {
+            'payment': payment,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/view_payment.html', context)
+        
+    except (Payment.DoesNotExist, UserProfile.DoesNotExist):
+        messages.error(request, 'Payment not found.')
+        return redirect('login')
+
+@login_required
+def update_payment(request, payment_id):
+    # Check if user is a secretary
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'SECRETARY':
+            messages.error(request, 'You are not authorized to update payments.')
+            return redirect('login')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+
+    if request.method == 'POST':
+        try:
+            payment = Payment.objects.get(id=payment_id)
+            if payment.status != 'PENDING':
+                messages.error(request, 'Only pending payments can be updated.')
+                return redirect('payment_management')
+
+            payment.amount = request.POST.get('amount')
+            payment.payment_method = request.POST.get('payment_method')
+            payment.transaction_id = request.POST.get('transaction_id')
+            payment.notes = request.POST.get('notes')
+            payment.status = request.POST.get('status')
+            payment.save()
+
+            # Create notification for patient
+            create_notification(
+                payment.appointment.patient,
+                'PAYMENT',
+                'Payment Updated',
+                f'Your payment of ${payment.amount} has been updated.',
+                f'/payments/{payment.id}/'
+            )
+
+            messages.success(request, 'Payment updated successfully!')
+            return redirect('payment_management')
+
+        except Payment.DoesNotExist:
+            messages.error(request, 'Payment not found.')
+            return redirect('payment_management')
+        except Exception as e:
+            messages.error(request, f'Error updating payment: {str(e)}')
+            return redirect('payment_management')
+
+    # For GET request
+    try:
+        payment = Payment.objects.get(id=payment_id)
+        context = {
+            'payment': payment,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/update_payment.html', context)
+    except Payment.DoesNotExist:
+        messages.error(request, 'Payment not found.')
+        return redirect('payment_management')
+
+@login_required
+def patient_payments(request):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'PATIENT':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+
+    # Get all appointments with payments
+    appointments = Appointment.objects.filter(
+        patient=user_profile
+    ).prefetch_related('payments').order_by('-appointment_date')
+
+    # Calculate payment statistics
+    total_paid = Payment.objects.filter(
+        appointment__patient=user_profile,
+        status='COMPLETED'
+    ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    pending_payments = Payment.objects.filter(
+        appointment__patient=user_profile,
+        status='PENDING'
+    ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    context = {
+        'appointments': appointments,
+        'total_paid': total_paid,
+        'pending_payments': pending_payments,
+        'user_profile': user_profile
+    }
+    return render(request, 'myApp/patient_payments.html', context)
+
+@login_required
+def view_patient_payment(request, payment_id):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'PATIENT':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+
+        payment = Payment.objects.get(id=payment_id)
+        if payment.appointment.patient != user_profile:
+            messages.error(request, 'You are not authorized to view this payment.')
+            return redirect('patient_payments')
+
+        context = {
+            'payment': payment,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/view_patient_payment.html', context)
+
+    except (UserProfile.DoesNotExist, Payment.DoesNotExist):
+        messages.error(request, 'Payment not found.')
+        return redirect('patient_payments')
+
+@login_required
+def patient_billing_history(request):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.user_type != 'PATIENT':
+            messages.error(request, 'You are not authorized to view this page.')
+            return redirect('login')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+
+    # Get all payments for the patient
+    payments = Payment.objects.filter(
+        appointment__patient=user_profile
+    ).order_by('-payment_date')
+
+    # Calculate billing statistics
+    billing_stats = {
+        'total_paid': payments.filter(status='COMPLETED').aggregate(total=models.Sum('amount'))['total'] or 0,
+        'pending_amount': payments.filter(status='PENDING').aggregate(total=models.Sum('amount'))['total'] or 0,
+        'total_payments': payments.count(),
+        'completed_payments': payments.filter(status='COMPLETED').count(),
+        'pending_payments': payments.filter(status='PENDING').count(),
+    }
+
+    context = {
+        'payments': payments,
+        'billing_stats': billing_stats,
+        'user_profile': user_profile
+    }
+    return render(request, 'myApp/patient_billing_history.html', context)

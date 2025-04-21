@@ -1,0 +1,355 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .calendar-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .calendar-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .calendar-nav {
+        display: flex;
+        gap: 10px;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+
+    .calendar-day {
+        background: white;
+        border-radius: 10px;
+        padding: 10px;
+        min-height: 100px;
+        position: relative;
+    }
+
+    .day-header {
+        font-weight: 500;
+        margin-bottom: 5px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .appointment-item {
+        background: #f7fafc;
+        border-radius: 5px;
+        padding: 5px;
+        margin-bottom: 5px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .appointment-item:hover {
+        transform: translateX(2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .appointment-time {
+        font-weight: 500;
+        color: #4a5568;
+    }
+
+    .appointment-patient {
+        color: #718096;
+    }
+
+    .today {
+        background: #ebf8ff;
+        border: 2px solid #4299e1;
+    }
+
+    .other-month {
+        opacity: 0.5;
+    }
+
+    .appointment-modal .modal-content {
+        border-radius: 15px;
+    }
+
+    .appointment-details {
+        padding: 20px;
+    }
+
+    .appointment-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn-action {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-confirm {
+        background: #48bb78;
+        color: white;
+    }
+
+    .btn-cancel {
+        background: #f56565;
+        color: white;
+    }
+
+    .btn-reschedule {
+        background: #667eea;
+        color: white;
+    }
+</style>
+
+<div class="calendar-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="calendar-card">
+                    <div class="calendar-header">
+                        <h2 class="mb-0">Appointment Calendar</h2>
+                        <div class="calendar-nav">
+                            <button class="btn btn-outline-primary" onclick="previousMonth()">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h4 class="mb-0" id="currentMonth">Loading...</h4>
+                            <button class="btn btn-outline-primary" onclick="nextMonth()">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarGrid">
+                        <!-- Calendar days will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Details Modal -->
+<div class="modal fade appointment-modal" id="appointmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Appointment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="appointment-details">
+                <div class="mb-3">
+                    <h6>Patient</h6>
+                    <p id="modalPatientName">Loading...</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Date & Time</h6>
+                    <p id="modalDateTime">Loading...</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Reason</h6>
+                    <p id="modalReason">Loading...</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Status</h6>
+                    <p id="modalStatus">Loading...</p>
+                </div>
+                <div class="appointment-actions" id="modalActions">
+                    <!-- Actions will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDate = new Date();
+let appointments = [];
+
+// Initialize calendar
+function initializeCalendar() {
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    
+    document.getElementById('currentMonth').textContent = 
+        `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    
+    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    
+    let calendarHTML = '';
+    
+    // Add day headers
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="calendar-day"><div class="day-header">${day}</div></div>`;
+    });
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay.getDay(); i++) {
+        calendarHTML += `<div class="calendar-day other-month"></div>`;
+    }
+    
+    // Add days of the month
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        let dayHTML = `<div class="calendar-day ${isToday ? 'today' : ''}" data-date="${date.toISOString().split('T')[0]}">`;
+        dayHTML += `<div class="day-header">${i}</div>`;
+        
+        // Add appointments for this day
+        const dayAppointments = appointments.filter(apt => 
+            apt.date === date.toISOString().split('T')[0]
+        );
+        
+        dayAppointments.forEach(apt => {
+            dayHTML += `
+                <div class="appointment-item" data-appointment-id="${apt.id}" onclick="showAppointmentDetails(${apt.id})">
+                    <div class="appointment-time">${apt.time}</div>
+                    <div class="appointment-patient">${apt.patient_name}</div>
+                </div>
+            `;
+        });
+        
+        dayHTML += '</div>';
+        calendarHTML += dayHTML;
+    }
+    
+    document.getElementById('calendarGrid').innerHTML = calendarHTML;
+}
+
+function previousMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    loadAppointments();
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    loadAppointments();
+}
+
+function loadAppointments() {
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    
+    fetch(`/api/appointments/calendar/?start_date=${startDate.toISOString()}&end_date=${endDate.toISOString()}`)
+        .then(response => response.json())
+        .then(data => {
+            appointments = data.appointments;
+            initializeCalendar();
+        })
+        .catch(error => {
+            console.error('Error loading appointments:', error);
+        });
+}
+
+function showAppointmentDetails(appointmentId) {
+    const appointment = appointments.find(apt => apt.id === appointmentId);
+    if (!appointment) return;
+    
+    document.getElementById('modalPatientName').textContent = appointment.patient_name;
+    document.getElementById('modalDateTime').textContent = 
+        `${appointment.date} at ${appointment.time}`;
+    document.getElementById('modalReason').textContent = appointment.reason;
+    document.getElementById('modalStatus').textContent = appointment.status;
+    
+    let actionsHTML = '';
+    if (appointment.status === 'PENDING') {
+        actionsHTML = `
+            <button class="btn-action btn-confirm" onclick="confirmAppointment(${appointmentId})">
+                <i class="fas fa-check"></i> Confirm
+            </button>
+            <button class="btn-action btn-cancel" onclick="cancelAppointment(${appointmentId})">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        `;
+    } else if (appointment.status === 'CONFIRMED') {
+        actionsHTML = `
+            <button class="btn-action btn-reschedule" onclick="rescheduleAppointment(${appointmentId})">
+                <i class="fas fa-calendar-alt"></i> Reschedule
+            </button>
+        `;
+    }
+    
+    document.getElementById('modalActions').innerHTML = actionsHTML;
+    
+    const modal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+    modal.show();
+}
+
+function confirmAppointment(appointmentId) {
+    fetch(`/appointments/${appointmentId}/confirm/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            loadAppointments();
+            bootstrap.Modal.getInstance(document.getElementById('appointmentModal')).hide();
+        } else {
+            alert('Error confirming appointment');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error confirming appointment');
+    });
+}
+
+function cancelAppointment(appointmentId) {
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+        fetch(`/appointments/${appointmentId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                loadAppointments();
+                bootstrap.Modal.getInstance(document.getElementById('appointmentModal')).hide();
+            } else {
+                alert('Error cancelling appointment');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error cancelling appointment');
+        });
+    }
+}
+
+function rescheduleAppointment(appointmentId) {
+    // Implement rescheduling functionality
+    alert('Rescheduling functionality will be implemented soon!');
+}
+
+// Load initial data
+loadAppointments();
+</script>
+{% endblock %} 

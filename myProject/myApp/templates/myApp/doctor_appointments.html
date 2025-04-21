@@ -251,6 +251,31 @@ document.querySelectorAll('.filter-btn').forEach(button => {
     });
 });
 
+function acceptAppointment(appointmentId) {
+    if (confirm('Accept this appointment?')) {
+        fetch(`/doctor/accept-appointment/${appointmentId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('Appointment accepted successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Error accepting appointment', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error accepting appointment', 'error');
+        });
+    }
+}
+
 function completeAppointment(appointmentId) {
     if (confirm('Mark this appointment as completed?')) {
         fetch(`/doctor/complete-appointment/${appointmentId}/`, {
@@ -300,29 +325,30 @@ function cancelAppointment(appointmentId) {
 }
 
 function showToast(message, type) {
-    const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" 
-             role="alert" 
-             aria-live="assertive" 
-             aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    const toastContainer = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
             </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
     
-    const toastContainer = document.querySelector('.toast-container');
-    toastContainer.innerHTML = toastHtml;
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
     
-    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'), {
-        autohide: true,
-        delay: 3000
+    // Remove the toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
     });
-    toast.show();
 }
 </script>
 {% endblock %} 

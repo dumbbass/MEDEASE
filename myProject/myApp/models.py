@@ -51,6 +51,7 @@ class Doctor(models.Model):
     specialization = models.CharField(max_length=100)
     experience = models.IntegerField()
     qualification = models.CharField(max_length=200)
+    prc_license = models.CharField(max_length=50, unique=True, help_text="Professional Regulation Commission License Number", null=True, blank=True)
     consultation_fee = models.DecimalField(max_digits=10, decimal_places=2)
     available_days = models.CharField(max_length=200)
     available_time = models.CharField(max_length=100)
@@ -210,3 +211,65 @@ class DoctorRegistrationCode(models.Model):
 
     def __str__(self):
         return f"Code: {self.code} ({'Active' if self.is_active else 'Inactive'})"
+
+class Referral(models.Model):
+    REFERRAL_TYPES = [
+        ('CONFINEMENT', 'Confinement'),
+        ('SPECIALIST', 'Specialist Consultation'),
+        ('TESTS', 'Medical Tests'),
+        ('OTHER', 'Other')
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('MILD', 'Mild'),
+        ('MODERATE', 'Moderate'),
+        ('SEVERE', 'Severe'),
+        ('CRITICAL', 'Critical')
+    ]
+    
+    patient = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='referrals_received')
+    referring_doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name='referrals_made')
+    referral_type = models.CharField(max_length=20, choices=REFERRAL_TYPES, default='CONFINEMENT')
+    severity_level = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='MODERATE')
+    reason = models.TextField()
+    notes = models.TextField(blank=True)
+    date_referred = models.DateTimeField(auto_now_add=True)
+    is_confirmed = models.BooleanField(default=False)
+    confirmation_date = models.DateTimeField(null=True, blank=True)
+    hospital_name = models.CharField(max_length=200, blank=True)
+    hospital_address = models.TextField(blank=True)
+    expected_duration = models.CharField(max_length=100, blank=True)  # e.g., "3-5 days"
+    
+    def __str__(self):
+        return f"Referral for {self.patient.full_name} by Dr. {self.referring_doctor.user_profile.full_name}"
+    
+    class Meta:
+        ordering = ['-date_referred']
+
+class Payment(models.Model):
+    PAYMENT_METHODS = [
+        ('CASH', 'Cash'),
+        ('ONLINE', 'Online Payment'),
+    ]
+
+    PAYMENT_STATUS = [
+        ('PENDING', 'Pending'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHODS)
+    status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='PENDING')
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    processed_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, related_name='processed_payments')
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f"Payment of {self.amount} for Appointment {self.appointment.id}"

@@ -1,4 +1,5 @@
 {% extends 'myApp/base.html' %}
+{% load custom_filters %}
 
 {% block content %}
 <style>
@@ -62,7 +63,7 @@
         font-weight: 500;
     }
 
-    .status-paid {
+    .status-completed {
         background: #c6f6d5;
         color: #2f855a;
     }
@@ -70,6 +71,11 @@
     .status-pending {
         background: #feebc8;
         color: #9c4221;
+    }
+
+    .status-failed {
+        background: #fed7d7;
+        color: #c53030;
     }
 
     .back-button {
@@ -151,6 +157,107 @@
         margin-bottom: 15px;
         color: #a0aec0;
     }
+
+    .btn-view {
+        background-color: #4299e1;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-left: 10px;
+    }
+
+    .btn-view:hover {
+        background-color: #3182ce;
+        color: white;
+        text-decoration: none;
+    }
+
+    .payment-form-container {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .payment-form {
+        display: grid;
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-group label {
+        font-weight: 500;
+        color: #4a5568;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .btn-process {
+        background: #667eea;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-process:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+
+    .payment-method-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .payment-method-option {
+        padding: 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+
+    .payment-method-option:hover {
+        border-color: #667eea;
+        background-color: #ebf8ff;
+    }
+
+    .payment-method-option.selected {
+        border-color: #667eea;
+        background-color: #ebf8ff;
+    }
+
+    .payment-method-option input[type="radio"] {
+        margin-right: 10px;
+    }
 </style>
 
 <div class="payments-container">
@@ -162,50 +269,119 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="payments-card">
-                    <h2 class="section-title">Payment Methods</h2>
+                    <h2 class="section-title">Payment Summary</h2>
                     <div class="payment-method">
                         <div class="payment-method-icon">
-                            <i class="fas fa-credit-card"></i>
+                            <i class="fas fa-wallet"></i>
                         </div>
                         <div class="payment-info">
-                            <h4>Credit Card</h4>
-                            <p class="text-muted">**** **** **** 1234</p>
+                            <h4>Total Paid</h4>
+                            <p class="payment-amount">${{ total_paid }}</p>
                         </div>
-                        <button class="btn btn-sm btn-outline-danger">Remove</button>
+                    </div>
+                    <div class="payment-method">
+                        <div class="payment-method-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="payment-info">
+                            <h4>Pending Payments</h4>
+                            <p class="payment-amount">${{ pending_payments }}</p>
+                        </div>
                     </div>
 
-                    <div class="text-center mb-4">
-                        <button class="add-payment-btn">
-                            <i class="fas fa-plus"></i> Add Payment Method
-                        </button>
+                    <h2 class="section-title">Make a New Payment</h2>
+                    <div class="payment-form-container">
+                        <form method="post" class="payment-form">
+                            {% csrf_token %}
+                            
+                            <div class="form-group">
+                                <label for="appointment">Select Appointment</label>
+                                <select id="appointment" name="appointment" required>
+                                    <option value="">Select an appointment</option>
+                                    {% for appointment in appointments %}
+                                        {% if not appointment.payments.exists or appointment.payments.first.status == 'PENDING' %}
+                                            <option value="{{ appointment.id }}">
+                                                Dr. {{ appointment.doctor.user_profile.full_name|capitalize_name }} - 
+                                                {{ appointment.appointment_date|date:"F d, Y" }} at 
+                                                {{ appointment.appointment_time|time:"g:i A" }}
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount">Amount ($)</label>
+                                <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+                            </div>
+
+                            <div class="payment-method-options">
+                                <label class="payment-method-option">
+                                    <input type="radio" name="payment_method" value="CASH" required>
+                                    Cash Payment
+                                </label>
+                                <label class="payment-method-option">
+                                    <input type="radio" name="payment_method" value="ONLINE" required>
+                                    Online Payment
+                                </label>
+                                <label class="payment-method-option">
+                                    <input type="radio" name="payment_method" value="CARD" required>
+                                    Credit/Debit Card
+                                </label>
+                            </div>
+
+                            <div class="form-group" id="transaction_id_group" style="display: none;">
+                                <label for="transaction_id">Transaction ID</label>
+                                <input type="text" id="transaction_id" name="transaction_id">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="notes">Notes (Optional)</label>
+                                <textarea id="notes" name="notes" placeholder="Add any additional information about the payment..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn-process">
+                                <i class="fas fa-credit-card"></i> Process Payment
+                            </button>
+                        </form>
                     </div>
 
                     <h2 class="section-title">Payment History</h2>
                     
-                    <div class="payment-item">
-                        <div class="payment-info">
-                            <div class="payment-amount">$100.00</div>
-                            <div class="payment-description">Consultation with Dr. John Smith</div>
-                            <div class="payment-date">Feb 15, 2025</div>
+                    {% if appointments %}
+                        {% for appointment in appointments %}
+                            <div class="payment-item">
+                                <div class="payment-info">
+                                    <div class="payment-amount">${{ appointment.payments.first.amount|default:"0.00" }}</div>
+                                    <div class="payment-description">
+                                        Appointment with Dr. {{ appointment.doctor.user_profile.full_name|capitalize_name }}
+                                    </div>
+                                    <div class="payment-date">
+                                        {{ appointment.appointment_date|date:"F d, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="payment-status status-{{ appointment.payments.first.status|lower|default:'pending' }}">
+                                        {{ appointment.payments.first.get_status_display|default:"No Payment" }}
+                                    </span>
+                                    {% if appointment.payments.exists %}
+                                        <a href="{% url 'view_patient_payment' appointment.payments.first.id %}" class="btn-view">
+                                            View Details
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-payments">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <h4>No Payment History</h4>
+                            <p>You haven't made any payments yet.</p>
+                            <a href="{% url 'book_appointment' %}" class="add-payment-btn">
+                                <i class="fas fa-calendar-plus"></i> Book an Appointment
+                            </a>
                         </div>
-                        <span class="payment-status status-paid">Paid</span>
-                    </div>
-
-                    <div class="payment-item">
-                        <div class="payment-info">
-                            <div class="payment-amount">$75.00</div>
-                            <div class="payment-description">Follow-up Appointment</div>
-                            <div class="payment-date">Feb 10, 2025</div>
-                        </div>
-                        <span class="payment-status status-pending">Pending</span>
-                    </div>
-
-                    <!-- If no payments -->
-                    <!-- <div class="no-payments">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                        <h4>No Payment History</h4>
-                        <p>You haven't made any payments yet.</p>
-                    </div> -->
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -213,14 +389,30 @@
 </div>
 
 <script>
-document.querySelector('.add-payment-btn').addEventListener('click', function() {
-    alert('Payment method addition functionality will be implemented soon!');
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle payment method selection
+        const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+        const transactionIdGroup = document.getElementById('transaction_id_group');
+        
+        paymentMethods.forEach(method => {
+            method.addEventListener('change', function() {
+                if (this.value === 'ONLINE') {
+                    transactionIdGroup.style.display = 'block';
+                } else {
+                    transactionIdGroup.style.display = 'none';
+                }
+            });
+        });
 
-document.querySelector('.btn-outline-danger').addEventListener('click', function() {
-    if (confirm('Are you sure you want to remove this payment method?')) {
-        alert('Payment method removal functionality will be implemented soon!');
-    }
-});
+        // Handle payment method option selection
+        const paymentOptions = document.querySelectorAll('.payment-method-option');
+        
+        paymentOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                paymentOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+    });
 </script>
 {% endblock %} 

@@ -1,0 +1,162 @@
+{% extends 'myApp/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<style>
+    .payment-details-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .payment-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .payment-card {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .payment-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .info-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .info-label {
+        color: #718096;
+        font-size: 0.875rem;
+    }
+
+    .info-value {
+        color: #2d3748;
+        font-weight: 500;
+        font-size: 1.1rem;
+    }
+
+    .payment-status {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 500;
+        margin-bottom: 20px;
+    }
+
+    .status-pending {
+        background-color: #fffaf0;
+        color: #c05621;
+    }
+
+    .status-completed {
+        background-color: #f0fff4;
+        color: #2f855a;
+    }
+
+    .status-failed {
+        background-color: #fff5f5;
+        color: #c53030;
+    }
+
+    .status-refunded {
+        background-color: #f7fafc;
+        color: #4a5568;
+    }
+
+    .payment-notes {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .notes-label {
+        color: #4a5568;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .notes-content {
+        color: #2d3748;
+        line-height: 1.5;
+    }
+
+    .btn-back {
+        display: inline-block;
+        background-color: #4299e1;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        text-decoration: none;
+        margin-top: 30px;
+    }
+
+    .btn-back:hover {
+        background-color: #3182ce;
+    }
+</style>
+
+<div class="payment-details-container">
+    <div class="payment-header">
+        <h1>Payment Details</h1>
+        <p>Appointment #{{ payment.appointment.id }}</p>
+    </div>
+
+    <div class="payment-card">
+        <span class="payment-status status-{{ payment.status|lower }}">
+            {{ payment.get_status_display }}
+        </span>
+
+        <div class="payment-info">
+            <div class="info-group">
+                <span class="info-label">Amount</span>
+                <span class="info-value">${{ payment.amount }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Payment Method</span>
+                <span class="info-value">{{ payment.get_payment_method_display }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Date</span>
+                <span class="info-value">{{ payment.payment_date|date:"F d, Y" }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Time</span>
+                <span class="info-value">{{ payment.payment_date|time:"g:i A" }}</span>
+            </div>
+            {% if payment.transaction_id %}
+                <div class="info-group">
+                    <span class="info-label">Transaction ID</span>
+                    <span class="info-value">{{ payment.transaction_id }}</span>
+                </div>
+            {% endif %}
+            <div class="info-group">
+                <span class="info-label">Processed By</span>
+                <span class="info-value">{{ payment.processed_by.full_name }}</span>
+            </div>
+            <div class="info-group">
+                <span class="info-label">Doctor:</span>
+                <span class="info-value">Dr. {{ payment.appointment.doctor.user_profile.full_name|capitalize_name }}</span>
+            </div>
+        </div>
+
+        {% if payment.notes %}
+            <div class="payment-notes">
+                <div class="notes-label">Notes</div>
+                <div class="notes-content">{{ payment.notes }}</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <a href="{% url 'patient_payments' %}" class="btn-back">Back to Payments</a>
+</div>
+{% endblock %} 

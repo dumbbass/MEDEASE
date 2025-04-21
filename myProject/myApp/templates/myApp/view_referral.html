@@ -1,0 +1,139 @@
+{% extends 'myApp/base.html' %}
+{% load static %}
+
+{% block title %}View Referral{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Back button -->
+    <div class="mb-3">
+        <a href="javascript:history.back()" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Referral Details</h4>
+            {% if user.userprofile == referral.patient and not referral.is_confirmed %}
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#confirmModal">
+                    Confirm Referral
+                </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="card-title">Patient Information</h5>
+                    <p><strong>Name:</strong> {{ referral.patient.full_name }}</p>
+                    <p><strong>Contact:</strong> {{ referral.patient.phone }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="card-title">Referring Doctor</h5>
+                    <p><strong>Name:</strong> {{ referral.referring_doctor.user_profile.full_name }}</p>
+                    <p><strong>Specialization:</strong> {{ referral.referring_doctor.specialization }}</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h5 class="card-title">Referral Information</h5>
+                    <p><strong>Type:</strong> {{ referral.referral_type }}</p>
+                    <p><strong>Severity Level:</strong> {{ referral.severity_level }}</p>
+                    <p><strong>Date Referred:</strong> {{ referral.date_referred|date:"F d, Y" }}</p>
+                    <p><strong>Status:</strong> 
+                        {% if referral.is_confirmed %}
+                            <span class="badge bg-success">Confirmed</span>
+                        {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h5 class="card-title">Hospital Details</h5>
+                    <p><strong>Hospital Name:</strong> {{ referral.hospital_name }}</p>
+                    <p><strong>Address:</strong> {{ referral.hospital_address }}</p>
+                    <p><strong>Expected Duration:</strong> {{ referral.expected_duration }}</p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h5 class="card-title">Reason & Notes</h5>
+                    <div class="card">
+                        <div class="card-body bg-light">
+                            <p><strong>Reason:</strong><br>{{ referral.reason }}</p>
+                            {% if referral.notes %}
+                                <p><strong>Additional Notes:</strong><br>{{ referral.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+{% if user.userprofile == referral.patient and not referral.is_confirmed %}
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirm Referral</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to confirm this referral?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmReferral()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function confirmReferral() {
+    fetch('{% url "confirm_referral" referral.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update the status badge
+            const statusBadge = document.querySelector('.badge');
+            statusBadge.className = 'badge bg-success';
+            statusBadge.textContent = 'Confirmed';
+            
+            // Hide the confirm button
+            const confirmButton = document.querySelector('[data-bs-target="#confirmModal"]');
+            if (confirmButton) {
+                confirmButton.style.display = 'none';
+            }
+            
+            // Close the modal
+            const modal = document.getElementById('confirmModal');
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            modalInstance.hide();
+            
+            // Show success message
+            alert('Referral confirmed successfully!');
+        } else {
+            alert('Error confirming referral: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error confirming referral. Please try again.');
+    });
+}
+</script>
+{% endblock %} 

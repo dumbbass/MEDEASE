@@ -1,0 +1,175 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<style>
+    .referral-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 0;
+    }
+
+    .referral-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+
+    .severity-indicator {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+
+    .severity-mild {
+        background: #c6f6d5;
+        color: #2f855a;
+    }
+
+    .severity-moderate {
+        background: #feebc8;
+        color: #9c4221;
+    }
+
+    .severity-severe {
+        background: #fed7d7;
+        color: #c53030;
+    }
+
+    .severity-critical {
+        background: #feb2b2;
+        color: #9b2c2c;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+</style>
+
+<div class="referral-container">
+    <div class="container">
+        <a href="{% url 'doctor_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="referral-card">
+                    <h2 class="text-center mb-4">Create Patient Referral</h2>
+                    
+                    <form method="POST" id="referralForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="patient" class="form-label">Select Patient</label>
+                            <select class="form-select" id="patient" name="patient" required>
+                                <option value="">Choose a patient...</option>
+                                {% for patient in patients %}
+                                    <option value="{{ patient.id }}">
+                                        {{ patient.full_name }} ({{ patient.user.email }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="referral_type" class="form-label">Referral Type</label>
+                            <select class="form-select" id="referral_type" name="referral_type" required>
+                                <option value="CONFINEMENT">Confinement</option>
+                                <option value="SPECIALIST">Specialist Consultation</option>
+                                <option value="TESTS">Medical Tests</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="severity_level" class="form-label">Severity Level</label>
+                            <select class="form-select" id="severity_level" name="severity_level" required>
+                                <option value="MILD">Mild</option>
+                                <option value="MODERATE">Moderate</option>
+                                <option value="SEVERE">Severe</option>
+                                <option value="CRITICAL">Critical</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason for Referral</label>
+                            <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hospital_name" class="form-label">Hospital Name</label>
+                            <input type="text" class="form-control" id="hospital_name" name="hospital_name">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hospital_address" class="form-label">Hospital Address</label>
+                            <textarea class="form-control" id="hospital_address" name="hospital_address" rows="2"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expected_duration" class="form-label">Expected Duration</label>
+                            <input type="text" class="form-control" id="expected_duration" name="expected_duration" 
+                                   placeholder="e.g., 3-5 days">
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">Create Referral</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const referralType = document.getElementById('referral_type');
+    const hospitalFields = document.querySelectorAll('[id^="hospital_"]');
+    const expectedDuration = document.getElementById('expected_duration');
+    
+    function toggleHospitalFields() {
+        const isConfinement = referralType.value === 'CONFINEMENT';
+        hospitalFields.forEach(field => {
+            field.required = isConfinement;
+            field.closest('.mb-3').style.display = isConfinement ? 'block' : 'none';
+        });
+        expectedDuration.required = isConfinement;
+        expectedDuration.closest('.mb-3').style.display = isConfinement ? 'block' : 'none';
+    }
+    
+    referralType.addEventListener('change', toggleHospitalFields);
+    toggleHospitalFields(); // Initial state
+});
+</script>
+{% endblock %} 
