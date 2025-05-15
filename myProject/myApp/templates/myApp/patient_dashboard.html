@@ -497,11 +497,7 @@
 <!-- Sidenav -->
 <div class="sidenav" id="mySidenav">
     <div class="sidenav-header">
-        {% if user_profile.profile_image %}
-            <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="sidenav-profile-img">
-        {% else %}
-            <img src="https://via.placeholder.com/80" alt="Profile" class="sidenav-profile-img">
-        {% endif %}
+        <img src="{{ user_profile.get_profile_image_url }}" alt="Profile" class="sidenav-profile-img">
         <h4>{{ user_profile.full_name }}</h4>
         <small class="text-muted">Patient ID: {{ user_profile.id }}</small>
     </div>
@@ -538,11 +534,7 @@
 <!-- Existing dashboard content with margin-left adjusted -->
 <div class="dashboard-container">
     <div class="welcome-section">
-        {% if user_profile.profile_image %}
-            <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="profile-image">
-        {% else %}
-            <img src="https://via.placeholder.com/120" alt="Default Profile" class="profile-image">
-        {% endif %}
+        <img src="{{ user_profile.get_profile_image_url }}" alt="Profile" class="profile-image">
         <h2>Welcome, {{ user_profile.full_name }}!</h2>
         <p>Manage your appointments and health records</p>
     </div>

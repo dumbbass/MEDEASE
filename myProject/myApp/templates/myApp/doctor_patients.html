@@ -174,11 +174,7 @@
                     {% if patients %}
                         {% for patient in patients %}
                             <div class="patient-item">
-                                {% if patient.profile_image %}
-                                    <img src="{{ patient.profile_image.url }}" alt="{{ patient.full_name }}" class="patient-avatar">
-                                {% else %}
-                                    <img src="https://via.placeholder.com/60" alt="Default Avatar" class="patient-avatar">
-                                {% endif %}
+                                <img src="{{ patient.get_profile_image_url }}" alt="{{ patient.full_name }}" class="patient-avatar">
                                 
                                 <div class="patient-info">
                                     <div class="patient-name">{{ patient.full_name }}</div>

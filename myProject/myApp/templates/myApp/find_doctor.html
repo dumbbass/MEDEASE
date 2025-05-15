@@ -182,8 +182,7 @@
                         {% for doctor in doctors %}
                             <div class="doctor-card">
                                 <div class="doctor-header">
-                                    <img src="{% if doctor.user_profile.profile_image %}{{ doctor.user_profile.profile_image.url }}{% else %}https://via.placeholder.com/60{% endif %}" 
-                                         alt="Doctor" class="doctor-avatar">
+                                    <img src="{{ doctor.user_profile.get_profile_image_url }}" alt="Doctor" class="doctor-avatar">
                                     <div class="doctor-info">
                                         <h3>Dr. {{ doctor.user_profile.full_name }}</h3>
                                         <p>{{ doctor.specialization }}</p>

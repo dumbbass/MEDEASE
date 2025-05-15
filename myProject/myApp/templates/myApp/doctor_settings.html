@@ -136,11 +136,7 @@
                     <form id="settingsForm">
                         {% csrf_token %}
                         <div class="profile-image-section">
-                            {% if user_profile.profile_image %}
-                                <img src="{{ user_profile.profile_image.url }}" alt="Profile" class="profile-image" id="profileImage">
-                            {% else %}
-                                <img src="https://via.placeholder.com/150" alt="Profile" class="profile-image" id="profileImage">
-                            {% endif %}
+                            <img src="{{ user_profile.get_profile_image_url }}" alt="Profile" class="profile-image" id="profileImage">
                             <div>
                                 <input type="file" id="imageUpload" accept="image/*" style="display: none;">
                                 <button type="button" class="image-upload-btn" onclick="document.getElementById('imageUpload').click()">

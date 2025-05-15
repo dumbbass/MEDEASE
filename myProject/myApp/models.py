@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.files.storage import default_storage
+import os
 
 # Create your models here.
 
@@ -24,6 +26,22 @@ class UserProfile(models.Model):
     medical_conditions = models.TextField(blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
+
+    def get_default_profile_image(self):
+        if self.user_type == 'DOCTOR':
+            return 'default_images/default_doctor.png'
+        return 'default_images/default_patient.png'
+
+    def get_profile_image_url(self):
+        if self.profile_image and default_storage.exists(self.profile_image.name):
+            return self.profile_image.url
+        return f'/media/{self.get_default_profile_image()}'
+
+    def save(self, *args, **kwargs):
+        # Capitalize the first letter of each word in full_name
+        if self.full_name:
+            self.full_name = ' '.join(word.capitalize() for word in self.full_name.split())
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.full_name} ({self.user_type})"
