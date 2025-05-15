@@ -358,6 +358,19 @@ def patient_dashboard(request):
             appointment_date__gte=timezone.now().date()
         ).order_by('appointment_date', 'appointment_time')
 
+        # Get all appointments for stats
+        all_appointments = Appointment.objects.filter(patient=user_profile)
+        stats = {
+            'total': all_appointments.count(),
+            'pending': all_appointments.filter(status='PENDING').count(),
+<<<<<<< Updated upstream
+            'confirmed': all_appointments.filter(status='CONFIRMED').count(),
+=======
+>>>>>>> Stashed changes
+            'completed': all_appointments.filter(status='COMPLETED').count(),
+            'cancelled': all_appointments.filter(status='CANCELLED').count(),
+        }
+
         # Get recent referrals for the patient
         referrals = Referral.objects.filter(
             patient=user_profile
@@ -373,7 +386,8 @@ def patient_dashboard(request):
             'user_profile': user_profile,
             'appointments': appointments,
             'referrals': referrals,
-            'unread_notifications_count': unread_notifications_count
+            'unread_notifications_count': unread_notifications_count,
+            'stats': stats,
         }
         
         return render(request, 'myApp/patient_dashboard.html', context)
