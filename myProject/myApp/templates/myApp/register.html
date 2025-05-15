@@ -228,27 +228,41 @@
 
                 <div class="form-group">
                     <label class="form-label">Full Name</label>
-                    <input type="text" name="full_name" class="form-control" required>
+                    <input type="text" name="full_name" class="form-control" id="full_name" required autofocus tabindex="1">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <input type="email" name="email" class="form-control" id="email" required tabindex="2">
+                    <span id="email-availability" style="margin-left:10px;"></span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" required>
+                    <input type="text" name="username" class="form-control" id="username" required tabindex="3">
+                    <span id="username-availability" style="margin-left:10px;"></span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" name="password1" class="form-control" required>
+                    <div style="position:relative;">
+                        <input type="password" name="password1" class="form-control" id="password1" required tabindex="4">
+                        <span id="togglePassword1" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); cursor:pointer;">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div id="password-strength" style="margin-top:8px;"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Confirm Password</label>
-                    <input type="password" name="password2" class="form-control" required>
+                    <div style="position:relative;">
+                        <input type="password" name="password2" class="form-control" id="password2" required tabindex="5">
+                        <span id="togglePassword2" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); cursor:pointer;">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div id="password-match-error" class="error-message" style="display:none;"></div>
                 </div>
 
                 <!-- Doctor-specific fields -->
@@ -321,13 +335,23 @@
                     </div>
                 </div>
 
+                <!-- Terms of Service & Privacy Policy Checkbox -->
+                <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center;">
+                        <input type="checkbox" id="termsCheckbox" tabindex="99" style="margin-right:8px;" required>
+                        I agree to the <a href="/privacy-policy/" target="_blank" style="color:#667eea; text-decoration:underline; margin:0 4px;">Privacy Policy</a> and <a href="/terms-of-service/" target="_blank" style="color:#667eea; text-decoration:underline; margin:0 4px;">Terms of Service</a>.
+                    </label>
+                    <div id="terms-error" class="error-message" style="display:none;"></div>
+                </div>
+
                 {% if error_message %}
                     <div class="error-message mb-3">
                         {{ error_message }}
                     </div>
                 {% endif %}
 
-                <button type="submit" class="register-btn">Create Account</button>
+                <button type="submit" class="register-btn" tabindex="100">Create Account</button>
+                <div id="form-errors" class="error-message mb-3" style="display:none;"></div>
             </form>
 
             <div class="login-link">
@@ -421,6 +445,175 @@ document.addEventListener('DOMContentLoaded', function() {
             availableDaysInput.value = selectedDays.join(',');
         });
     });
+
+    // Password strength meter
+    const password1 = document.getElementById('password1');
+    const password2 = document.getElementById('password2');
+    const passwordStrength = document.getElementById('password-strength');
+    const passwordMatchError = document.getElementById('password-match-error');
+    const togglePassword1 = document.getElementById('togglePassword1');
+    const togglePassword2 = document.getElementById('togglePassword2');
+    const formErrors = document.getElementById('form-errors');
+    const registerForm = document.getElementById('registerForm');
+
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        return strength;
+    }
+
+    function updatePasswordStrength() {
+        const pwd = password1.value;
+        const strength = checkPasswordStrength(pwd);
+        let strengthText = '';
+        let color = '';
+        switch(strength) {
+            case 0:
+            case 1:
+                strengthText = 'Very Weak'; color = '#e53e3e'; break;
+            case 2:
+                strengthText = 'Weak'; color = '#ed8936'; break;
+            case 3:
+                strengthText = 'Moderate'; color = '#ecc94b'; break;
+            case 4:
+                strengthText = 'Strong'; color = '#38a169'; break;
+            case 5:
+                strengthText = 'Very Strong'; color = '#3182ce'; break;
+        }
+        passwordStrength.innerHTML = `<span style='color:${color}; font-weight:500;'>${strengthText}</span>`;
+    }
+
+    password1.addEventListener('input', updatePasswordStrength);
+
+    // Show/hide password toggle
+    togglePassword1.addEventListener('click', function() {
+        const type = password1.type === 'password' ? 'text' : 'password';
+        password1.type = type;
+        this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+    });
+    togglePassword2.addEventListener('click', function() {
+        const type = password2.type === 'password' ? 'text' : 'password';
+        password2.type = type;
+        this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+    });
+
+    // Password match validation
+    function checkPasswordMatch() {
+        if (password2.value && password1.value !== password2.value) {
+            passwordMatchError.style.display = 'block';
+            passwordMatchError.textContent = 'Passwords do not match.';
+            return false;
+        } else {
+            passwordMatchError.style.display = 'none';
+            return true;
+        }
+    }
+    password2.addEventListener('input', checkPasswordMatch);
+    password1.addEventListener('input', checkPasswordMatch);
+
+    // Email and username validation
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    // Prevent form submission if terms not checked
+    registerForm.addEventListener('submit', function(e) {
+        let errors = [];
+        const email = registerForm.querySelector('input[name="email"]').value;
+        const username = registerForm.querySelector('input[name="username"]').value;
+        const pwd = password1.value;
+        const pwd2 = password2.value;
+        const termsCheckbox = document.getElementById('termsCheckbox');
+        const termsError = document.getElementById('terms-error');
+        if (!validateEmail(email)) {
+            errors.push('Please enter a valid email address.');
+        }
+        if (!username.trim()) {
+            errors.push('Username cannot be empty.');
+        }
+        if (pwd !== pwd2) {
+            errors.push('Passwords do not match.');
+        }
+        if (checkPasswordStrength(pwd) < 3) {
+            errors.push('Password is too weak.');
+        }
+        if (!termsCheckbox.checked) {
+            termsError.style.display = 'block';
+            termsError.textContent = 'You must agree to the Privacy Policy and Terms of Service.';
+            errors.push('You must agree to the Privacy Policy and Terms of Service.');
+        } else {
+            termsError.style.display = 'none';
+        }
+        if (errors.length > 0) {
+            e.preventDefault();
+            formErrors.style.display = 'block';
+            formErrors.innerHTML = errors.join('<br>');
+        } else {
+            formErrors.style.display = 'none';
+        }
+    });
+
+    // Username availability check
+    const usernameInput = document.getElementById('username');
+    const usernameAvailability = document.getElementById('username-availability');
+    let usernameTimeout = null;
+    usernameInput.addEventListener('input', function() {
+        clearTimeout(usernameTimeout);
+        const username = this.value.trim();
+        if (!username) {
+            usernameAvailability.innerHTML = '';
+            return;
+        }
+        usernameTimeout = setTimeout(() => {
+            fetch('/check-username/?username=' + encodeURIComponent(username))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        usernameAvailability.innerHTML = '<span style="color: #38a169;">&#10003; Available</span>';
+                    } else {
+                        usernameAvailability.innerHTML = '<span style="color: #e53e3e;">&#10007; Taken</span>';
+                    }
+                })
+                .catch(() => {
+                    usernameAvailability.innerHTML = '';
+                });
+        }, 400);
+    });
+
+    // Email availability check
+    const emailInput = document.getElementById('email');
+    const emailAvailability = document.getElementById('email-availability');
+    let emailTimeout = null;
+    emailInput.addEventListener('input', function() {
+        clearTimeout(emailTimeout);
+        const email = this.value.trim();
+        if (!email) {
+            emailAvailability.innerHTML = '';
+            return;
+        }
+        emailTimeout = setTimeout(() => {
+            fetch('/check-email/?email=' + encodeURIComponent(email))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        emailAvailability.innerHTML = '<span style="color: #38a169;">&#10003; Available</span>';
+                    } else {
+                        emailAvailability.innerHTML = '<span style="color: #e53e3e;">&#10007; Taken</span>';
+                    }
+                })
+                .catch(() => {
+                    emailAvailability.innerHTML = '';
+                });
+        }, 400);
+    });
+
+    // Auto-focus on first field (for browsers that don't support HTML autofocus)
+    document.getElementById('full_name').focus();
 });
 </script>
 {% endblock %} 

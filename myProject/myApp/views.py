@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord, DoctorRegistrationCode, Referral, Payment
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_GET
 from django.views.decorators.csrf import ensure_csrf_cookie
 import json
 from django.contrib.auth import login, authenticate, logout
@@ -310,35 +310,35 @@ def register_view(request):
 
 @csrf_protect
 def login_view(request):
+    error_message = None
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        
-        user = authenticate(username=username, password=password)
-        
-        if user is not None:
-            # Use a different session key for regular user login
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            
-            # Get user profile
-            user_profile = UserProfile.objects.get(user=user)
-            
-            # Create login history entry
-            LoginHistory.objects.create(
-                user=user_profile,
-                ip_address=request.META.get('REMOTE_ADDR'),
-                user_agent=request.META.get('HTTP_USER_AGENT')
-            )
-            
-            # Redirect based on user type
-            if user_profile.user_type == 'DOCTOR':
-                return redirect('doctor_dashboard')
-            else:
-                return redirect('patient_dashboard')
+        if not username or not password:
+            error_message = 'Please enter both username and password.'
         else:
-            messages.error(request, 'Invalid username or password')
-    
-    return render(request, 'myApp/login.html')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                if not user.is_active:
+                    error_message = 'Your account is inactive. Please contact support.'
+                else:
+                    try:
+                        user_profile = UserProfile.objects.get(user=user)
+                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        LoginHistory.objects.create(
+                            user=user_profile,
+                            ip_address=request.META.get('REMOTE_ADDR'),
+                            user_agent=request.META.get('HTTP_USER_AGENT')
+                        )
+                        if user_profile.user_type == 'DOCTOR':
+                            return redirect('doctor_dashboard')
+                        else:
+                            return redirect('patient_dashboard')
+                    except UserProfile.DoesNotExist:
+                        error_message = 'Your account is missing a user profile. Please contact support.'
+            else:
+                error_message = 'Invalid username or password. Please try again.'
+    return render(request, 'myApp/login.html', {'error_message': error_message})
 
 def logout_view(request):
     logout(request)
@@ -1723,3 +1723,18 @@ def patient_billing_history(request):
         'user_profile': user_profile
     }
     return render(request, 'myApp/patient_billing_history.html', context)
+
+@require_GET
+def check_username(request):
+    username = request.GET.get('username', '').strip()
+    exists = User.objects.filter(username__iexact=username).exists()
+    return JsonResponse({'available': not exists})
+
+@require_GET
+def check_email(request):
+    email = request.GET.get('email', '').strip()
+    exists = User.objects.filter(email__iexact=email).exists()
+    return JsonResponse({'available': not exists})
+
+def terms_of_service(request):
+    return render(request, 'myApp/terms_of_service.html')

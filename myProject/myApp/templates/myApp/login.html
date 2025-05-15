@@ -297,7 +297,7 @@
                 <form method="POST" action="{% url 'login' %}">
                     {% csrf_token %}
                     {% if error_message %}
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" style="margin-bottom: 20px;">
                         <i class="fas fa-exclamation-circle"></i>
                         <span>{{ error_message }}</span>
                     </div>
