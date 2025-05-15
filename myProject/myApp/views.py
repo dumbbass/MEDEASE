@@ -363,10 +363,7 @@ def patient_dashboard(request):
         stats = {
             'total': all_appointments.count(),
             'pending': all_appointments.filter(status='PENDING').count(),
-<<<<<<< Updated upstream
             'confirmed': all_appointments.filter(status='CONFIRMED').count(),
-=======
->>>>>>> Stashed changes
             'completed': all_appointments.filter(status='COMPLETED').count(),
             'cancelled': all_appointments.filter(status='CANCELLED').count(),
         }
