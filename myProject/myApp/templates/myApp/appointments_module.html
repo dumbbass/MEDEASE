@@ -13,6 +13,7 @@
         border-radius: 20px;
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         padding: 30px;
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
     }
 
@@ -170,10 +171,46 @@
         color: white;
         border-color: #667eea;
     }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
 </style>
 
 <div class="appointments-container">
     <div class="container">
+        {% if user_profile.user_type == 'PATIENT' %}
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        {% elif user_profile.user_type == 'DOCTOR' %}
+        <a href="{% url 'doctor_dashboard' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        {% endif %}
+        
         <div class="row justify-content-center">
             <div class="col-md-10">
                 <div class="appointments-card">
@@ -208,11 +245,11 @@
                                         {% endif %}
                                         <div>
                                             <div class="doctor-name">Dr. {{ appointment.doctor.user_profile.full_name }}</div>
-                                            <div class="appointment-date">{{ appointment.date|date:"F j, Y" }} at {{ appointment.time|time:"g:i A" }}</div>
+                                            <div class="appointment-date">{{ appointment.appointment_date|date:"F j, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}</div>
                                         </div>
                                     </div>
                                     <span class="appointment-status status-{{ appointment.status|lower }}">
-                                        {{ appointment.get_status_display }}
+                                        {{ appointment.status }}
                                     </span>
                                 </div>
                                 <div class="appointment-details">
@@ -220,9 +257,11 @@
                                 </div>
                                 <div class="appointment-actions">
                                     {% if appointment.status == 'PENDING' %}
+                                        {% if user_profile.user_type == 'DOCTOR' %}
                                         <button class="btn-action btn-confirm" onclick="confirmAppointment({{ appointment.id }})">
                                             <i class="fas fa-check"></i> Confirm
                                         </button>
+                                        {% endif %}
                                         <button class="btn-action btn-cancel" onclick="cancelAppointment({{ appointment.id }})">
                                             <i class="fas fa-times"></i> Cancel
                                         </button>
@@ -249,15 +288,15 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">New Appointment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="newAppointmentForm">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">Select Doctor</label>
+                        <label class="form-label" for="doctorSearch">Select Doctor</label>
                         <input type="text" id="doctorSearch" class="form-control mb-2" placeholder="Search doctors...">
-                        <select name="doctor" class="form-control" required>
+                        <select name="doctor" id="doctor" class="form-control" required title="Select a doctor">
                             <option value="">Choose a doctor...</option>
                             {% for doctor in doctors %}
                                 <option value="{{ doctor.id }}" data-name="{{ doctor.user_profile.full_name }}" data-specialization="{{ doctor.specialization }}">
@@ -267,16 +306,16 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Appointment Date</label>
-                        <input type="date" name="date" class="form-control" required min="{{ min_date|date:'Y-m-d' }}">
+                        <label class="form-label" for="appointmentDate">Appointment Date</label>
+                        <input type="date" id="appointmentDate" name="appointment_date" class="form-control" required min="{{ min_date|date:'Y-m-d' }}" title="Select appointment date">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Appointment Time</label>
-                        <input type="time" name="time" class="form-control" required>
+                        <label class="form-label" for="appointmentTime">Appointment Time</label>
+                        <input type="time" id="appointmentTime" name="appointment_time" class="form-control" required title="Select appointment time">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Reason for Visit</label>
-                        <textarea name="reason" class="form-control" rows="3" required></textarea>
+                        <label class="form-label" for="appointmentReason">Reason for Visit</label>
+                        <textarea id="appointmentReason" name="reason" class="form-control" rows="3" required placeholder="Describe the reason for your visit"></textarea>
                     </div>
                 </form>
             </div>
@@ -352,14 +391,22 @@ function submitNewAppointment() {
 
     fetch("{% url 'book_appointment' %}", {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            window.location.reload();
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
         } else {
-            alert(data.message || 'Error booking appointment');
+            return response.json().then(data => {
+                if (data.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error booking appointment');
+                }
+            });
         }
     })
     .catch(error => {

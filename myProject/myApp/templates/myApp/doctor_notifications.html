@@ -224,11 +224,21 @@ function markAsRead(notificationId) {
             'X-CSRFToken': '{{ csrf_token }}'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.status === 'success') {
             window.location.reload();
+        } else {
+            console.error('Error marking notification as read:', data.message || 'Unknown error');
         }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
     });
 }
 
@@ -239,11 +249,21 @@ function markAllAsRead() {
             'X-CSRFToken': '{{ csrf_token }}'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.status === 'success') {
             window.location.reload();
+        } else {
+            console.error('Error marking all notifications as read:', data.message || 'Unknown error');
         }
+    })
+    .catch(error => {
+        console.error('Error marking all notifications as read:', error);
     });
 }
 
@@ -255,11 +275,21 @@ function deleteNotification(notificationId) {
                 'X-CSRFToken': '{{ csrf_token }}'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 window.location.reload();
+            } else {
+                console.error('Error deleting notification:', data.message || 'Unknown error');
             }
+        })
+        .catch(error => {
+            console.error('Error deleting notification:', error);
         });
     }
 }

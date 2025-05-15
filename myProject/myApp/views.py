@@ -757,6 +757,11 @@ def delete_notification(request, notification_id):
 @login_required
 def doctor_dashboard(request):
     user_profile = UserProfile.objects.get(user=request.user)
+    
+    # Check if the user is a doctor
+    if user_profile.user_type != 'DOCTOR':
+        return redirect('login')
+    
     doctor = Doctor.objects.get(user_profile=user_profile)
     
     # Get today's appointments
@@ -771,15 +776,59 @@ def doctor_dashboard(request):
         referring_doctor=doctor
     ).order_by('-date_referred')[:5]  # Show last 5 referrals
     
+    # Get recent patients (patients with appointments)
+    recent_patients = User.objects.filter(
+        userprofile__patient_appointments__doctor=doctor
+    ).distinct().order_by('-userprofile__patient_appointments__created_at')[:5]
+    
+    # Update the recent patients with additional information
+    for patient in recent_patients:
+        # Find the last appointment date
+        last_appointment = Appointment.objects.filter(
+            doctor=doctor,
+            patient__user=patient
+        ).order_by('-appointment_date', '-appointment_time').first()
+        
+        if last_appointment:
+            patient.last_appointment_date = last_appointment.appointment_date
+            
+            # Check if the patient has upcoming appointments
+            patient.has_upcoming_appointment = Appointment.objects.filter(
+                doctor=doctor,
+                patient__user=patient,
+                appointment_date__gte=today,
+                status__in=['PENDING', 'CONFIRMED']
+            ).exists()
+    
+    # Count pending reports and referrals
+    pending_reports_count = MedicalRecord.objects.filter(
+        doctor=doctor,
+        date_created__gte=today - timedelta(days=30)
+    ).count()
+    
+    pending_referrals_count = Referral.objects.filter(
+        referring_doctor=doctor,
+        is_confirmed=False
+    ).count()
+    
+    # Get notification count
+    notification_count = Notification.objects.filter(
+        user=user_profile,
+        is_read=False
+    ).count()
+    
     context = {
         'user_profile': user_profile,
         'doctor': doctor,
         'today_appointments': today_appointments,
         'today_appointments_count': today_appointments.count(),
-        'total_patients': Appointment.objects.filter(doctor=doctor).values('patient').distinct().count(),
+        'total_patients_count': Appointment.objects.filter(doctor=doctor).values('patient').distinct().count(),
         'pending_appointments': Appointment.objects.filter(doctor=doctor, status='PENDING').count(),
         'completed_appointments': Appointment.objects.filter(doctor=doctor, status='COMPLETED').count(),
-        'unread_notifications_count': Notification.objects.filter(user=user_profile, is_read=False).count(),
+        'pending_reports_count': pending_reports_count,
+        'pending_referrals_count': pending_referrals_count,
+        'notification_count': notification_count,
+        'recent_patients': recent_patients,
         'referrals': referrals
     }
     
@@ -1162,22 +1211,31 @@ def admin_appointments(request):
 
 @login_required
 def appointments_module(request):
-    if request.user.user_type == 'PATIENT':
-        appointments = Appointment.objects.filter(patient=request.user.patient_profile)
-    elif request.user.user_type == 'DOCTOR':
-        appointments = Appointment.objects.filter(doctor=request.user.doctor_profile)
-    else:
-        appointments = Appointment.objects.all()
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        if user_profile.user_type == 'PATIENT':
+            appointments = Appointment.objects.filter(patient=user_profile)
+        elif user_profile.user_type == 'DOCTOR':
+            doctor = Doctor.objects.get(user_profile=user_profile)
+            appointments = Appointment.objects.filter(doctor=doctor)
+        else:
+            appointments = Appointment.objects.all()
+        
+        doctors = Doctor.objects.all()
+        min_date = timezone.now().date()
+        
+        context = {
+            'appointments': appointments,
+            'doctors': doctors,
+            'min_date': min_date,
+            'user_profile': user_profile
+        }
+        return render(request, 'myApp/appointments_module.html', context)
     
-    doctors = Doctor.objects.all()
-    min_date = timezone.now().date()
-    
-    context = {
-        'appointments': appointments,
-        'doctors': doctors,
-        'min_date': min_date,
-    }
-    return render(request, 'myApp/appointments_module.html', context)
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'User profile not found')
+        return redirect('login')
 
 @login_required
 @require_POST
@@ -1227,15 +1285,52 @@ def confirm_appointment(request, appointment_id):
 
 @login_required
 @require_POST
-def cancel_appointment(request, appointment_id):
+def appointments_cancel_appointment(request, appointment_id):
     try:
+        user_profile = UserProfile.objects.get(user=request.user)
         appointment = Appointment.objects.get(id=appointment_id)
-        if (request.user.user_type == 'DOCTOR' and appointment.doctor == request.user.doctor_profile) or \
-           (request.user.user_type == 'PATIENT' and appointment.patient == request.user.patient_profile):
-            appointment.status = 'CANCELLED'
-            appointment.save()
-            return JsonResponse({'status': 'success'})
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        
+        # Check if user has permission to cancel this appointment
+        if user_profile.user_type == 'DOCTOR':
+            doctor = Doctor.objects.get(user_profile=user_profile)
+            if appointment.doctor != doctor:
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        elif user_profile.user_type == 'PATIENT':
+            if appointment.patient != user_profile:
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        
+        # Cancel the appointment
+        appointment.status = 'CANCELLED'
+        appointment.save()
+        
+        # Create notification
+        if user_profile.user_type == 'DOCTOR':
+            # Notify patient
+            create_notification(
+                appointment.patient,
+                'APPOINTMENT',
+                'Appointment Cancelled',
+                f'Your appointment with Dr. {user_profile.full_name} has been cancelled.',
+                f'/appointments/{appointment.id}/'
+            )
+        else:
+            # Notify doctor
+            create_notification(
+                appointment.doctor.user_profile,
+                'APPOINTMENT',
+                'Appointment Cancelled',
+                f'Patient {user_profile.full_name} has cancelled their appointment scheduled for {appointment.appointment_date}.',
+                f'/appointments/{appointment.id}/'
+            )
+            
+        return JsonResponse({'status': 'success'})
+        
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User profile not found'}, status=404)
+    except Doctor.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Doctor profile not found'}, status=404)
     except Appointment.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Appointment not found'}, status=404)
 
