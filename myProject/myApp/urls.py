@@ -64,4 +64,7 @@ urlpatterns = [
     path('patient/payments/<int:payment_id>/', views.view_patient_payment, name='view_patient_payment'),
     path('patient/payments/process/<int:appointment_id>/', views.process_patient_payment, name='process_patient_payment'),
     path('delete-medical-record/<int:record_id>/', views.delete_medical_record, name='delete_medical_record'),
+    path('api/check-username/', views.check_username, name='check_username'),
+    path('api/check-email/', views.check_email, name='check_email'),
+    path('terms-and-conditions/', views.terms_and_conditions, name='terms_and_conditions'),
 ]

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import Profile, Project, Experience, Skill, Contact, Hobby, UserProfile, Doctor, LoginHistory, Appointment, Notification, Prescription, MedicalRecord, DoctorRegistrationCode, Referral, Payment
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_GET
 from django.views.decorators.csrf import ensure_csrf_cookie
 import json
 from django.contrib.auth import login, authenticate, logout
@@ -224,6 +224,8 @@ def register_view(request):
                 full_name = request.POST['full_name']
                 phone = request.POST.get('phone', '')
                 address = request.POST.get('address', '')
+                gender = request.POST.get('gender', '')
+                date_of_birth = request.POST.get('date_of_birth', '')
 
                 # Validation
                 if password1 != password2:
@@ -250,6 +252,12 @@ def register_view(request):
                     phone=phone,
                     address=address
                 )
+                # Save optional demographics
+                if gender:
+                    user_profile.gender = gender
+                if date_of_birth:
+                    user_profile.date_of_birth = date_of_birth
+                user_profile.save()
 
                 # Create login history entry
                 LoginHistory.objects.create(
@@ -1546,7 +1554,6 @@ def confirm_referral(request, referral_id):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
-@login_required
 def privacy_policy(request):
     return render(request, 'myApp/privacy_policy.html')
 
@@ -1818,3 +1825,18 @@ def patient_billing_history(request):
         'user_profile': user_profile
     }
     return render(request, 'myApp/patient_billing_history.html', context)
+
+@require_GET
+def check_username(request):
+    username = request.GET.get('username', '')
+    exists = User.objects.filter(username=username).exists()
+    return JsonResponse({'available': not exists})
+
+@require_GET
+def check_email(request):
+    email = request.GET.get('email', '')
+    exists = User.objects.filter(email=email).exists()
+    return JsonResponse({'available': not exists})
+
+def terms_and_conditions(request):
+    return render(request, 'myApp/terms_and_conditions.html')

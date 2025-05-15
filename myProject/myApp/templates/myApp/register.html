@@ -233,22 +233,50 @@
 
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <input type="email" name="email" class="form-control" id="emailInput" required>
+                    <div id="email-availability" style="font-size:0.9em;margin-top:4px;"></div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" required>
+                    <input type="text" name="username" class="form-control" id="usernameInput" required>
+                    <div id="username-availability" style="font-size:0.9em;margin-top:4px;"></div>
                 </div>
 
+                <!-- Optional Demographics -->
                 <div class="form-group">
+                    <label class="form-label">Gender (optional)</label>
+                    <select name="gender" class="form-control">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth (optional)</label>
+                    <input type="date" name="date_of_birth" class="form-control">
+                </div>
+
+                <div class="form-group password-group">
                     <label class="form-label">Password</label>
-                    <input type="password" name="password1" class="form-control" required>
+                    <div style="position:relative;">
+                        <input type="password" name="password1" class="form-control password-input" id="password1" required>
+                        <span class="toggle-password" toggle="#password1" style="position:absolute;top:50%;right:15px;transform:translateY(-50%);cursor:pointer;">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div id="password-strength" style="margin-top:8px;"></div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group password-group">
                     <label class="form-label">Confirm Password</label>
-                    <input type="password" name="password2" class="form-control" required>
+                    <div style="position:relative;">
+                        <input type="password" name="password2" class="form-control password-input" id="password2" required>
+                        <span class="toggle-password" toggle="#password2" style="position:absolute;top:50%;right:15px;transform:translateY(-50%);cursor:pointer;">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Doctor-specific fields -->
@@ -319,6 +347,13 @@
                         <input type="text" name="admin_code" class="form-control doctor-input" id="adminCode" {% if code %}value="{{ code }}"{% endif %}>
                         <small class="text-muted">Please contact admin for doctor registration.</small>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <input type="checkbox" id="termsCheckbox" required>
+                    <label for="termsCheckbox" style="display:inline;">
+                        I agree to the <a href="/privacy-policy/" target="_blank">Privacy Policy</a> and <a href="/terms-and-conditions/" target="_blank">Terms and Conditions</a>.
+                    </label>
                 </div>
 
                 {% if error_message %}
@@ -420,6 +455,111 @@ document.addEventListener('DOMContentLoaded', function() {
             
             availableDaysInput.value = selectedDays.join(',');
         });
+    });
+
+    // Password Strength Meter
+    const passwordInput = document.getElementById('password1');
+    const strengthBar = document.getElementById('password-strength');
+    passwordInput.addEventListener('input', function() {
+        const val = passwordInput.value;
+        let strength = 0;
+        if (val.length >= 8) strength++;
+        if (/[A-Z]/.test(val)) strength++;
+        if (/[a-z]/.test(val)) strength++;
+        if (/[0-9]/.test(val)) strength++;
+        if (/[^A-Za-z0-9]/.test(val)) strength++;
+        let strengthText = '';
+        let color = '';
+        switch(strength) {
+            case 0:
+            case 1:
+                strengthText = 'Very Weak'; color = '#e53e3e'; break;
+            case 2:
+                strengthText = 'Weak'; color = '#ed8936'; break;
+            case 3:
+                strengthText = 'Moderate'; color = '#ecc94b'; break;
+            case 4:
+                strengthText = 'Strong'; color = '#38a169'; break;
+            case 5:
+                strengthText = 'Very Strong'; color = '#3182ce'; break;
+        }
+        strengthBar.innerHTML = `<span style="color:${color};font-weight:500;">${strengthText}</span>`;
+    });
+
+    // Show/Hide Password Toggle
+    document.querySelectorAll('.toggle-password').forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            const input = document.querySelector(this.getAttribute('toggle'));
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                input.type = 'password';
+                this.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+    });
+
+    // Live Username Availability Check
+    const usernameInput = document.getElementById('usernameInput');
+    const usernameAvailability = document.getElementById('username-availability');
+    let usernameTimeout;
+    usernameInput.addEventListener('input', function() {
+        clearTimeout(usernameTimeout);
+        const username = this.value.trim();
+        if (!username) {
+            usernameAvailability.textContent = '';
+            return;
+        }
+        usernameTimeout = setTimeout(function() {
+            fetch(`/api/check-username/?username=${encodeURIComponent(username)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.available) {
+                        usernameAvailability.textContent = 'Username is available';
+                        usernameAvailability.style.color = '#38a169';
+                    } else {
+                        usernameAvailability.textContent = 'Username is already taken';
+                        usernameAvailability.style.color = '#e53e3e';
+                    }
+                });
+        }, 400);
+    });
+
+    // Live Email Availability Check
+    const emailInput = document.getElementById('emailInput');
+    const emailAvailability = document.getElementById('email-availability');
+    let emailTimeout;
+    emailInput.addEventListener('input', function() {
+        clearTimeout(emailTimeout);
+        const email = this.value.trim();
+        if (!email) {
+            emailAvailability.textContent = '';
+            return;
+        }
+        emailTimeout = setTimeout(function() {
+            fetch(`/api/check-email/?email=${encodeURIComponent(email)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.available) {
+                        emailAvailability.textContent = 'Email is available';
+                        emailAvailability.style.color = '#38a169';
+                    } else {
+                        emailAvailability.textContent = 'Email is already taken';
+                        emailAvailability.style.color = '#e53e3e';
+                    }
+                });
+        }, 400);
+    });
+
+    // Prevent form submission if terms are not checked
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        var terms = document.getElementById('termsCheckbox');
+        if (!terms.checked) {
+            e.preventDefault();
+            terms.focus();
+            alert('You must agree to the Privacy Policy and Terms and Conditions to register.');
+        }
     });
 });
 </script>
