@@ -216,9 +216,9 @@
                 <div class="appointments-card">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h2 class="section-title mb-0">Appointments</h2>
-                        <button class="btn-action btn-confirm" data-bs-toggle="modal" data-bs-target="#newAppointmentModal">
+                        <a href="{% url 'book_appointment' %}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> New Appointment
-                        </button>
+                        </a>
                     </div>
 
                     <div class="search-box">
@@ -277,51 +277,6 @@
                         <p class="text-center text-muted">No appointments found</p>
                     {% endif %}
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- New Appointment Modal -->
-<div class="modal fade" id="newAppointmentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">New Appointment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="newAppointmentForm">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label" for="doctorSearch">Select Doctor</label>
-                        <input type="text" id="doctorSearch" class="form-control mb-2" placeholder="Search doctors...">
-                        <select name="doctor" id="doctor" class="form-control" required title="Select a doctor">
-                            <option value="">Choose a doctor...</option>
-                            {% for doctor in doctors %}
-                                <option value="{{ doctor.id }}" data-name="{{ doctor.user_profile.full_name }}" data-specialization="{{ doctor.specialization }}">
-                                    Dr. {{ doctor.user_profile.full_name }} - {{ doctor.specialization }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="appointmentDate">Appointment Date</label>
-                        <input type="date" id="appointmentDate" name="appointment_date" class="form-control" required min="{{ min_date|date:'Y-m-d' }}" title="Select appointment date">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="appointmentTime">Appointment Time</label>
-                        <input type="time" id="appointmentTime" name="appointment_time" class="form-control" required title="Select appointment time">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="appointmentReason">Reason for Visit</label>
-                        <textarea id="appointmentReason" name="reason" class="form-control" rows="3" required placeholder="Describe the reason for your visit"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitNewAppointment()">Book Appointment</button>
             </div>
         </div>
     </div>

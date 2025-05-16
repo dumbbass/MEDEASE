@@ -439,8 +439,9 @@ def book_appointment(request):
                 f'/appointments/{appointment.id}/'
             )
 
-            messages.success(request, 'Appointment booked successfully!')
-            return redirect('patient_dashboard')
+            messages.success(request, 'Appointment booked successfully! Please proceed with the payment.')
+            # Redirect to the payment page for this appointment
+            return redirect('process_patient_payment', appointment_id=appointment.id)
 
         except Exception as e:
             messages.error(request, f'Error booking appointment: {str(e)}')
@@ -1446,6 +1447,25 @@ def get_available_slots(request):
         if not doctor_id or not date:
             return JsonResponse({'status': 'error', 'message': 'Doctor ID and date are required'}, status=400)
             
+        # Get doctor's available time
+        doctor = Doctor.objects.get(id=doctor_id)
+        available_time = doctor.available_time.split(' - ')
+        start_time = datetime.strptime(available_time[0], '%H:%M').time()
+        end_time = datetime.strptime(available_time[1], '%H:%M').time()
+        
+        # Get doctor's available days
+        available_days = [day.strip() for day in doctor.available_days.split(',')]
+        
+        # Check if the selected date's day is in available days
+        selected_date = datetime.strptime(date, '%Y-%m-%d')
+        selected_day = selected_date.strftime('%A')
+        
+        if selected_day not in available_days:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Doctor is not available on {selected_day}s'
+            }, status=400)
+        
         # Get all appointments for the selected doctor and date
         appointments = Appointment.objects.filter(
             doctor_id=doctor_id,
@@ -1456,11 +1476,25 @@ def get_available_slots(request):
         # Get booked time slots
         booked_slots = [apt.appointment_time.strftime('%H:%M') for apt in appointments]
         
+        # Generate all possible time slots within doctor's available time
+        time_slots = []
+        current_time = start_time
+        while current_time < end_time:
+            time_slots.append(current_time.strftime('%H:%M'))
+            # Add 30 minutes
+            current_time = (datetime.combine(datetime.today(), current_time) + timedelta(minutes=30)).time()
+        
+        # Filter out booked slots
+        available_slots = [slot for slot in time_slots if slot not in booked_slots]
+        
         return JsonResponse({
             'status': 'success',
+            'available_slots': available_slots,
             'booked_slots': booked_slots
         })
         
+    except Doctor.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Doctor not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
@@ -1644,13 +1678,21 @@ def process_patient_payment(request, appointment_id):
                 payment_method = request.POST.get('payment_method')
                 transaction_id = request.POST.get('transaction_id')
                 notes = request.POST.get('notes')
+                gcash_number = request.POST.get('gcash_number')
+                paymaya_number = request.POST.get('paymaya_number')
+
+                # Validate payment amount matches doctor's consultation fee
+                if amount != appointment.doctor.consultation_fee:
+                    raise ValueError('Invalid payment amount')
 
                 # Create payment record
                 payment = Payment.objects.create(
                     appointment=appointment,
                     amount=amount,
                     payment_method=payment_method,
-                    transaction_id=transaction_id if payment_method == 'ONLINE' else None,
+                    transaction_id=transaction_id if payment_method in ['GCASH', 'PAYMAYA', 'CARD'] else None,
+                    gcash_number=gcash_number if payment_method == 'GCASH' else None,
+                    paymaya_number=paymaya_number if payment_method == 'PAYMAYA' else None,
                     processed_by=user_profile,
                     notes=notes,
                     status='PENDING'  # Payment will be confirmed by secretary
@@ -1663,15 +1705,24 @@ def process_patient_payment(request, appointment_id):
                         secretary,
                         'PAYMENT',
                         'New Payment Pending',
-                        f'Patient {user_profile.full_name} has submitted a payment of ${amount} for appointment #{appointment.id}.',
+                        f'Patient {user_profile.full_name} has submitted a {payment.get_payment_method_display()} payment of ${amount} for appointment #{appointment.id}.',
                         f'/payments/{payment.id}/'
                     )
+
+                # Create notification for doctor
+                create_notification(
+                    appointment.doctor.user_profile,
+                    'PAYMENT',
+                    'New Payment Received',
+                    f'Patient {user_profile.full_name} has submitted a {payment.get_payment_method_display()} payment of ${amount} for their appointment with you.',
+                    f'/payments/{payment.id}/'
+                )
 
                 messages.success(request, 'Payment submitted successfully! It will be processed by our staff.')
                 return redirect('patient_payments')
 
-            except ValueError:
-                messages.error(request, 'Invalid amount entered.')
+            except ValueError as e:
+                messages.error(request, str(e))
             except Exception as e:
                 messages.error(request, f'Error processing payment: {str(e)}')
 
@@ -1867,6 +1918,10 @@ def confirm_payment(request, payment_id):
         # Only doctor can confirm their own payments
         if user_profile.user_type != 'DOCTOR' or payment.appointment.doctor.user_profile != user_profile:
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        
+        # Check if payment is already confirmed
+        if payment.status == 'COMPLETED':
+            return JsonResponse({'status': 'error', 'message': 'Payment has already been confirmed'}, status=400)
         
         # Update payment status
         payment.status = 'COMPLETED'

@@ -201,15 +201,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Generate time slots (9 AM to 5 PM, 30-minute intervals)
-    const timeSlots = [];
-    for (let hour = 9; hour <= 17; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-            const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            timeSlots.push(time);
-        }
-    }
-    
     function updateTimeSlots() {
         const selectedDate = dateInput.value;
         const doctorId = doctorSelect.value;
@@ -219,14 +210,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Fetch booked time slots for the selected date and doctor
+        // Fetch available time slots for the selected date and doctor
         fetch(`/api/appointments/available-slots/?doctor=${doctorId}&date=${selectedDate}`)
             .then(response => response.json())
             .then(data => {
+                if (data.status === 'error') {
+                    timeSlotsContainer.innerHTML = `<p class="text-danger">${data.message}</p>`;
+                    return;
+                }
+                
+                const availableSlots = data.available_slots || [];
                 const bookedSlots = data.booked_slots || [];
                 
                 timeSlotsContainer.innerHTML = '';
-                timeSlots.forEach(slot => {
+                if (availableSlots.length === 0) {
+                    timeSlotsContainer.innerHTML = '<p class="text-muted">No available time slots for this date</p>';
+                    return;
+                }
+                
+                availableSlots.forEach(slot => {
                     const isBooked = bookedSlots.includes(slot);
                     const slotElement = document.createElement('div');
                     slotElement.className = `time-slot ${isBooked ? 'unavailable' : ''}`;
@@ -258,8 +260,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Submit the form
-        this.submit();
+        // Show confirmation message
+        if (confirm('After booking, you will be redirected to the payment page. Would you like to continue?')) {
+            // Submit the form
+            this.submit();
+        }
     });
     
     doctorSelect.addEventListener('change', updateTimeSlots);

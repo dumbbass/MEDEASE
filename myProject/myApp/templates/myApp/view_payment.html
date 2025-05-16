@@ -19,17 +19,40 @@
                                 {{ payment.get_status_display }}
                             </span>
                         </p>
-                        <p><strong>Date:</strong> {{ payment.payment_date }}</p>
+                        <p><strong>Date:</strong> {{ payment.processed_at|date:"F d, Y" }}</p>
+                        <p><strong>Time:</strong> {{ payment.processed_at|time:"g:i A" }}</p>
                         {% if payment.transaction_id %}
                             <p><strong>Transaction ID:</strong> {{ payment.transaction_id }}</p>
+                        {% endif %}
+                        {% if payment.gcash_number %}
+                            <p><strong>GCash Number:</strong> {{ payment.gcash_number }}</p>
+                        {% endif %}
+                        {% if payment.paymaya_number %}
+                            <p><strong>PayMaya Number:</strong> {{ payment.paymaya_number }}</p>
                         {% endif %}
                         {% if payment.notes %}
                             <p><strong>Notes:</strong> {{ payment.notes }}</p>
                         {% endif %}
                     </div>
 
+                    {% if user_profile.user_type == 'SECRETARY' and payment.status == 'PENDING' %}
+                        <div class="mt-4">
+                            <h5>Update Payment Status</h5>
+                            <form method="POST" action="{% url 'update_payment' payment.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" name="status" value="COMPLETED" class="btn btn-success me-2">
+                                    Mark as Completed
+                                </button>
+                                <button type="submit" name="status" value="FAILED" class="btn btn-danger">
+                                    Mark as Failed
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+
                     {% if user_profile.user_type == 'DOCTOR' and payment.status == 'PENDING' %}
                         <div class="mt-4">
+                            <h5>Confirm Payment</h5>
                             <button class="btn btn-success" onclick="confirmPayment({{ payment.id }})">
                                 <i class="fas fa-check-circle"></i> Confirm Payment
                             </button>

@@ -103,6 +103,10 @@
             <span class="info-label">Time</span>
             <span class="info-value">{{ appointment.appointment_time|time:"g:i A" }}</span>
         </div>
+        <div class="info-item">
+            <span class="info-label">Consultation Fee</span>
+            <span class="info-value">${{ appointment.doctor.consultation_fee }}</span>
+        </div>
     </div>
 
     <form method="POST" class="payment-form">
@@ -110,21 +114,32 @@
         
         <div class="form-group">
             <label for="amount">Amount ($)</label>
-            <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+            <input type="number" id="amount" name="amount" step="0.01" value="{{ appointment.doctor.consultation_fee }}" readonly required>
         </div>
 
         <div class="form-group">
             <label for="payment_method">Payment Method</label>
             <select id="payment_method" name="payment_method" required>
                 <option value="CASH">Cash</option>
-                <option value="ONLINE">Online Payment</option>
+                <option value="GCASH">GCash</option>
+                <option value="PAYMAYA">PayMaya</option>
                 <option value="CARD">Credit/Debit Card</option>
             </select>
         </div>
 
+        <div class="form-group" id="gcash_group" style="display: none;">
+            <label for="gcash_number">GCash Number</label>
+            <input type="text" id="gcash_number" name="gcash_number" placeholder="Enter your GCash number">
+        </div>
+
+        <div class="form-group" id="paymaya_group" style="display: none;">
+            <label for="paymaya_number">PayMaya Number</label>
+            <input type="text" id="paymaya_number" name="paymaya_number" placeholder="Enter your PayMaya number">
+        </div>
+
         <div class="form-group" id="transaction_id_group" style="display: none;">
             <label for="transaction_id">Transaction ID</label>
-            <input type="text" id="transaction_id" name="transaction_id">
+            <input type="text" id="transaction_id" name="transaction_id" placeholder="Enter transaction ID">
         </div>
 
         <div class="form-group">
@@ -138,14 +153,11 @@
 
 <script>
     document.getElementById('payment_method').addEventListener('change', function() {
-        const transactionIdGroup = document.getElementById('transaction_id_group');
-        if (this.value === 'ONLINE') {
-            transactionIdGroup.style.display = 'block';
-            document.getElementById('transaction_id').required = true;
-        } else {
-            transactionIdGroup.style.display = 'none';
-            document.getElementById('transaction_id').required = false;
-        }
+        const method = this.value;
+        document.getElementById('gcash_group').style.display = method === 'GCASH' ? 'block' : 'none';
+        document.getElementById('paymaya_group').style.display = method === 'PAYMAYA' ? 'block' : 'none';
+        document.getElementById('transaction_id_group').style.display = 
+            (method === 'GCASH' || method === 'PAYMAYA' || method === 'CARD') ? 'block' : 'none';
     });
 </script>
 {% endblock %} 
