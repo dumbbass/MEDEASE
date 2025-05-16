@@ -67,4 +67,5 @@ urlpatterns = [
     path('api/check-username/', views.check_username, name='check_username'),
     path('api/check-email/', views.check_email, name='check_email'),
     path('terms-and-conditions/', views.terms_and_conditions, name='terms_and_conditions'),
+    path('confirm-payment/<int:payment_id>/', views.confirm_payment, name='confirm_payment'),
 ]

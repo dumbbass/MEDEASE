@@ -268,28 +268,35 @@ class Referral(models.Model):
 
 class Payment(models.Model):
     PAYMENT_METHODS = [
-        ('CASH', 'Cash'),
-        ('ONLINE', 'Online Payment'),
+        ('CASH', 'Cash Payment'),
+        ('GCASH', 'GCash'),
+        ('PAYMAYA', 'PayMaya'),
+        ('CARD', 'Credit/Debit Card'),
     ]
-
-    PAYMENT_STATUS = [
+    
+    STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('COMPLETED', 'Completed'),
         ('FAILED', 'Failed'),
         ('REFUNDED', 'Refunded'),
     ]
-
+    
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHODS)
-    status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='PENDING')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    payment_date = models.DateTimeField(auto_now_add=True)
-    processed_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, related_name='processed_payments')
+    gcash_number = models.CharField(max_length=20, blank=True, null=True)
+    paymaya_number = models.CharField(max_length=20, blank=True, null=True)
+    processed_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
 
-    class Meta:
-        ordering = ['-payment_date']
-
     def __str__(self):
-        return f"Payment of {self.amount} for Appointment {self.appointment.id}"
+        return f"Payment {self.id} - {self.appointment.patient.full_name} - ${self.amount}"
+
+    def get_status_display(self):
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+
+    def get_payment_method_display(self):
+        return dict(self.PAYMENT_METHODS).get(self.payment_method, self.payment_method)

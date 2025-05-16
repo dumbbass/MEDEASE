@@ -1,0 +1,70 @@
+{% extends 'myApp/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Payment Details</h4>
+                </div>
+                <div class="card-body">
+                    <div class="payment-details">
+                        <p><strong>Patient:</strong> {{ payment.appointment.patient.full_name }}</p>
+                        <p><strong>Doctor:</strong> Dr. {{ payment.appointment.doctor.user_profile.full_name }}</p>
+                        <p><strong>Amount:</strong> ${{ payment.amount }}</p>
+                        <p><strong>Payment Method:</strong> {{ payment.get_payment_method_display }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge {% if payment.status == 'COMPLETED' %}bg-success{% elif payment.status == 'PENDING' %}bg-warning{% else %}bg-danger{% endif %}">
+                                {{ payment.get_status_display }}
+                            </span>
+                        </p>
+                        <p><strong>Date:</strong> {{ payment.payment_date }}</p>
+                        {% if payment.transaction_id %}
+                            <p><strong>Transaction ID:</strong> {{ payment.transaction_id }}</p>
+                        {% endif %}
+                        {% if payment.notes %}
+                            <p><strong>Notes:</strong> {{ payment.notes }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% if user_profile.user_type == 'DOCTOR' and payment.status == 'PENDING' %}
+                        <div class="mt-4">
+                            <button class="btn btn-success" onclick="confirmPayment({{ payment.id }})">
+                                <i class="fas fa-check-circle"></i> Confirm Payment
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmPayment(paymentId) {
+    if (confirm('Are you sure you want to confirm this payment?')) {
+        fetch(`/confirm-payment/${paymentId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Payment confirmed successfully!');
+                window.location.reload();
+            } else {
+                alert('Error confirming payment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error confirming payment. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -123,6 +123,16 @@
         transform: translateY(-2px);
     }
 
+    .btn-confirm {
+        background: #48bb78 !important;
+        color: white !important;
+    }
+
+    .btn-confirm:hover {
+        background: #38a169 !important;
+        transform: translateY(-2px);
+    }
+
     .back-button {
         display: inline-flex;
         align-items: center;
@@ -205,11 +215,13 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="notifications-card">
-                    <div class="notifications-header">
-                        <h2>Notifications {% if unread_count > 0 %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}</h2>
-                        <button class="mark-all-read" onclick="markAllRead()">
-                            <i class="fas fa-check-double"></i> Mark all as read
-                        </button>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="section-title mb-0">Notifications</h2>
+                        {% if unread_count > 0 %}
+                            <button class="mark-all-read" onclick="markAllAsRead()">
+                                <i class="fas fa-check-double"></i> Mark All as Read
+                            </button>
+                        {% endif %}
                     </div>
 
                     {% if notifications %}
@@ -222,6 +234,8 @@
                                         <i class="fas fa-file-medical"></i>
                                     {% elif notification.type == 'PRESCRIPTION' %}
                                         <i class="fas fa-prescription"></i>
+                                    {% elif notification.type == 'PAYMENT' %}
+                                        <i class="fas fa-money-bill-wave"></i>
                                     {% else %}
                                         <i class="fas fa-bell"></i>
                                     {% endif %}
@@ -233,6 +247,11 @@
                                     <div class="notification-actions">
                                         {% if notification.related_link %}
                                             <a href="{{ notification.related_link }}" class="notification-btn primary">View Details</a>
+                                        {% endif %}
+                                        {% if notification.type == 'PAYMENT' and 'New Payment Received' in notification.title %}
+                                            <button class="notification-btn btn-confirm" onclick="confirmPayment('{{ notification.related_link }}')">
+                                                <i class="fas fa-check-circle"></i> Confirm Payment
+                                            </button>
                                         {% endif %}
                                         {% if not notification.is_read %}
                                             <button class="notification-btn" onclick="markAsRead({{ notification.id }})">
@@ -260,112 +279,77 @@
 </div>
 
 <script>
-function markAllRead() {
-    fetch('/notifications/mark-all-read/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            document.querySelectorAll('.notification-item').forEach(item => {
-                // Remove unread class
-                item.classList.remove('unread');
-                
-                // Remove only the "Mark as Read" button
-                const markReadBtn = item.querySelector('button.notification-btn:not(.primary):not(.btn-delete)');
-                if (markReadBtn) {
-                    markReadBtn.remove();
-                }
-                
-                // Remove the "New" badge if it exists
-                const newBadge = item.querySelector('.badge.bg-success');
-                if (newBadge) {
-                    newBadge.remove();
-                }
-            });
-            updateUnreadCount();
-        }
-    });
-}
-
-function markAsRead(notificationId) {
-    fetch(`/notifications/mark-read/${notificationId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            const notification = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-            notification.classList.remove('unread');
-            // Remove only the "Mark as Read" button
-            const markReadBtn = notification.querySelector('button.notification-btn:not(.primary):not(.btn-delete)');
-            if (markReadBtn) {
-                markReadBtn.remove();
-            }
-            // Remove the "New" badge
-            const newBadge = notification.querySelector('.badge.bg-success');
-            if (newBadge) {
-                newBadge.remove();
-            }
-            updateUnreadCount();
-        }
-    });
-}
-
-function updateUnreadCount() {
-    const unreadCount = document.querySelectorAll('.notification-item.unread').length;
-    const badge = document.querySelector('.badge');
-    if (badge) {
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount;
-        } else {
-            badge.remove();
-        }
-    }
-}
-
-function deleteNotification(notificationId) {
-    if (confirm('Are you sure you want to delete this notification?')) {
-        fetch(`/notifications/delete/${notificationId}/`, {
+    function markAsRead(notificationId) {
+        fetch(`/notifications/mark-read/${notificationId}/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
+                'X-CSRFToken': '{{ csrf_token }}'
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                const notification = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-                notification.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => {
-                    notification.remove();
-                    updateUnreadCount();
-                    
-                    // Check if there are no more notifications
-                    const remainingNotifications = document.querySelectorAll('.notification-item');
-                    if (remainingNotifications.length === 0) {
-                        const notificationsContainer = document.querySelector('.notifications-card');
-                        notificationsContainer.innerHTML = `
-                            <div class="no-notifications">
-                                <i class="fas fa-bell-slash"></i>
-                                <h4>No Notifications</h4>
-                                <p>You're all caught up!</p>
-                            </div>
-                        `;
-                    }
-                }, 300);
+                window.location.reload();
             }
         });
     }
-}
+
+    function markAllAsRead() {
+        fetch('/notifications/mark-all-read/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            }
+        });
+    }
+
+    function deleteNotification(notificationId) {
+        if (confirm('Are you sure you want to delete this notification?')) {
+            fetch(`/notifications/delete/${notificationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.reload();
+                }
+            });
+        }
+    }
+
+    function confirmPayment(paymentUrl) {
+        if (confirm('Are you sure you want to confirm this payment?')) {
+            const paymentId = paymentUrl.split('/').filter(Boolean).pop();
+            fetch(`/confirm-payment/${paymentId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Payment confirmed successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error confirming payment: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error confirming payment. Please try again.');
+            });
+        }
+    }
 </script>
 {% endblock %} 

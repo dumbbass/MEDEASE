@@ -615,15 +615,23 @@ def payments(request):
                 payment_method = request.POST.get('payment_method')
                 transaction_id = request.POST.get('transaction_id')
                 notes = request.POST.get('notes')
+                gcash_number = request.POST.get('gcash_number')
+                paymaya_number = request.POST.get('paymaya_number')
 
                 appointment = Appointment.objects.get(id=appointment_id, patient=user_profile)
+
+                # Validate payment amount
+                if amount <= 0:
+                    raise ValueError('Payment amount must be greater than 0')
 
                 # Create payment record
                 payment = Payment.objects.create(
                     appointment=appointment,
                     amount=amount,
                     payment_method=payment_method,
-                    transaction_id=transaction_id if payment_method == 'ONLINE' else None,
+                    transaction_id=transaction_id if payment_method in ['GCASH', 'PAYMAYA'] else None,
+                    gcash_number=gcash_number if payment_method == 'GCASH' else None,
+                    paymaya_number=paymaya_number if payment_method == 'PAYMAYA' else None,
                     processed_by=user_profile,
                     notes=notes,
                     status='PENDING'  # Payment will be confirmed by secretary
@@ -636,15 +644,25 @@ def payments(request):
                         secretary,
                         'PAYMENT',
                         'New Payment Pending',
-                        f'Patient {user_profile.full_name} has submitted a payment of ${amount} for appointment #{appointment.id}.',
+                        f'Patient {user_profile.full_name} has submitted a {payment.get_payment_method_display()} payment of ${amount} for appointment #{appointment.id}.',
                         f'/payments/{payment.id}/'
                     )
+
+                # Create notification for doctor
+                doctor_profile = appointment.doctor.user_profile
+                create_notification(
+                    doctor_profile,
+                    'PAYMENT',
+                    'New Payment Received',
+                    f'Patient {user_profile.full_name} has submitted a {payment.get_payment_method_display()} payment of ${amount} for their appointment with you.',
+                    f'/payments/{payment.id}/'
+                )
 
                 messages.success(request, 'Payment submitted successfully! It will be processed by our staff.')
                 return redirect('payments')
 
-            except ValueError:
-                messages.error(request, 'Invalid amount entered.')
+            except ValueError as e:
+                messages.error(request, str(e))
             except Appointment.DoesNotExist:
                 messages.error(request, 'Appointment not found.')
             except Exception as e:
@@ -1684,60 +1702,46 @@ def view_payment(request, payment_id):
 
 @login_required
 def update_payment(request, payment_id):
-    # Check if user is a secretary
-    try:
-        user_profile = UserProfile.objects.get(user=request.user)
-        if user_profile.user_type != 'SECRETARY':
-            messages.error(request, 'You are not authorized to update payments.')
-            return redirect('login')
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'User profile not found.')
-        return redirect('login')
-
     if request.method == 'POST':
         try:
             payment = Payment.objects.get(id=payment_id)
-            if payment.status != 'PENDING':
-                messages.error(request, 'Only pending payments can be updated.')
-                return redirect('payment_management')
-
-            payment.amount = request.POST.get('amount')
-            payment.payment_method = request.POST.get('payment_method')
-            payment.transaction_id = request.POST.get('transaction_id')
-            payment.notes = request.POST.get('notes')
-            payment.status = request.POST.get('status')
-            payment.save()
-
-            # Create notification for patient
-            create_notification(
-                payment.appointment.patient,
-                'PAYMENT',
-                'Payment Updated',
-                f'Your payment of ${payment.amount} has been updated.',
-                f'/payments/{payment.id}/'
-            )
-
-            messages.success(request, 'Payment updated successfully!')
-            return redirect('payment_management')
-
+            user_profile = UserProfile.objects.get(user=request.user)
+            
+            # Only secretary can update payment status
+            if user_profile.user_type != 'SECRETARY':
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+            
+            new_status = request.POST.get('status')
+            if new_status in dict(Payment.STATUS_CHOICES):
+                payment.status = new_status
+                payment.save()
+                
+                # Create notification for patient
+                create_notification(
+                    payment.appointment.patient,
+                    'PAYMENT',
+                    'Payment Status Updated',
+                    f'Your payment of ${payment.amount} has been {payment.get_status_display().lower()}.',
+                    f'/payments/{payment.id}/'
+                )
+                
+                # Create notification for doctor
+                create_notification(
+                    payment.appointment.doctor.user_profile,
+                    'PAYMENT',
+                    'Payment Status Updated',
+                    f'Payment of ${payment.amount} from {payment.appointment.patient.full_name} has been {payment.get_status_display().lower()}.',
+                    f'/payments/{payment.id}/'
+                )
+                
+                return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'error', 'message': 'Invalid status'}, status=400)
+            
         except Payment.DoesNotExist:
-            messages.error(request, 'Payment not found.')
-            return redirect('payment_management')
-        except Exception as e:
-            messages.error(request, f'Error updating payment: {str(e)}')
-            return redirect('payment_management')
-
-    # For GET request
-    try:
-        payment = Payment.objects.get(id=payment_id)
-        context = {
-            'payment': payment,
-            'user_profile': user_profile
-        }
-        return render(request, 'myApp/update_payment.html', context)
-    except Payment.DoesNotExist:
-        messages.error(request, 'Payment not found.')
-        return redirect('payment_management')
+            return JsonResponse({'status': 'error', 'message': 'Payment not found'}, status=404)
+        except UserProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'User profile not found'}, status=404)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
 @login_required
 def patient_payments(request):
@@ -1843,3 +1847,47 @@ def check_email(request):
 
 def terms_and_conditions(request):
     return render(request, 'myApp/terms_and_conditions.html')
+
+@login_required
+@require_POST
+def confirm_payment(request, payment_id):
+    try:
+        payment = Payment.objects.get(id=payment_id)
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        # Only doctor can confirm their own payments
+        if user_profile.user_type != 'DOCTOR' or payment.appointment.doctor.user_profile != user_profile:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        
+        # Update payment status
+        payment.status = 'COMPLETED'
+        payment.save()
+        
+        # Create notification for patient
+        create_notification(
+            payment.appointment.patient,
+            'PAYMENT',
+            'Payment Confirmed',
+            f'Your payment of ${payment.amount} has been confirmed by Dr. {user_profile.full_name}.',
+            f'/payments/{payment.id}/'
+        )
+        
+        # Create notification for secretary
+        secretary = UserProfile.objects.filter(user_type='SECRETARY').first()
+        if secretary:
+            create_notification(
+                secretary,
+                'PAYMENT',
+                'Payment Confirmed',
+                f'Dr. {user_profile.full_name} has confirmed a payment of ${payment.amount} from {payment.appointment.patient.full_name}.',
+                f'/payments/{payment.id}/'
+            )
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Payment.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Payment not found'}, status=404)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User profile not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

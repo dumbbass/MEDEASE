@@ -151,6 +151,16 @@
         margin-bottom: 15px;
         color: #a0aec0;
     }
+
+    .btn-success {
+        background: #48bb78 !important;
+        color: white !important;
+    }
+
+    .btn-success:hover {
+        background: #38a169 !important;
+        transform: translateY(-2px);
+    }
 </style>
 
 <div class="notifications-container">
@@ -191,6 +201,11 @@
                                         <a href="{{ notification.related_link }}" class="notification-btn">
                                             <i class="fas fa-external-link-alt"></i> View Details
                                         </a>
+                                    {% endif %}
+                                    {% if notification.type == 'PAYMENT' and 'New Payment Received' in notification.title %}
+                                        <button class="notification-btn btn-success" onclick="confirmPayment('{{ notification.related_link }}')">
+                                            <i class="fas fa-check-circle"></i> Confirm Payment
+                                        </button>
                                     {% endif %}
                                     {% if not notification.is_read %}
                                         <button class="notification-btn" onclick="markAsRead({{ notification.id }})">
@@ -293,5 +308,111 @@ function deleteNotification(notificationId) {
         });
     }
 }
+
+function confirmPayment(paymentUrl) {
+    if (confirm('Are you sure you want to confirm this payment?')) {
+        const paymentId = paymentUrl.split('/').filter(Boolean).pop();
+        const notificationItem = event.target.closest('.notification-item');
+        
+        fetch(`/confirm-payment/${paymentId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update the notification UI
+                if (notificationItem) {
+                    // Remove the confirm button
+                    const confirmButton = notificationItem.querySelector('.btn-success');
+                    if (confirmButton) {
+                        confirmButton.remove();
+                    }
+                    
+                    // Update notification status
+                    notificationItem.classList.remove('unread');
+                    const newBadge = notificationItem.querySelector('.badge');
+                    if (newBadge) {
+                        newBadge.remove();
+                    }
+                    
+                    // Add success message
+                    const messageDiv = notificationItem.querySelector('.notification-message');
+                    if (messageDiv) {
+                        messageDiv.innerHTML += '<div class="text-success mt-2"><i class="fas fa-check-circle"></i> Payment confirmed</div>';
+                    }
+                    
+                    // Disable the mark as read button if it exists
+                    const markAsReadButton = notificationItem.querySelector('.notification-btn:not(.btn-delete):not(.btn-success)');
+                    if (markAsReadButton) {
+                        markAsReadButton.disabled = true;
+                        markAsReadButton.style.opacity = '0.5';
+                    }
+                }
+                
+                // Show success toast
+                showToast('Payment confirmed successfully!', 'success');
+            } else {
+                showToast('Error confirming payment: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error confirming payment. Please try again.', 'error');
+        });
+    }
+}
+
+// Add toast notification function
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'success' ? 'bg-success' : 'bg-danger'} text-white`;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: slideIn 0.5s ease-out;
+    `;
+    
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.5s ease-out';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .text-success {
+        color: #48bb78;
+    }
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %} 
