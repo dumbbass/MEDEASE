@@ -86,9 +86,15 @@
 
 <div class="appointment-container">
     <div class="container">
+        {% if user_profile.user_type == 'DOCTOR' %}
+        <a href="{% url 'doctor_notifications' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Notifications
+        </a>
+        {% else %}
         <a href="{% url 'notifications' %}" class="back-button">
             <i class="fas fa-arrow-left"></i> Back to Notifications
         </a>
+        {% endif %}
 
         <div class="row justify-content-center">
             <div class="col-md-8">

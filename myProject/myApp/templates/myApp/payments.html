@@ -14,6 +14,7 @@
         border-radius: 20px;
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         padding: 30px;
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
     }
 
@@ -88,6 +89,7 @@
         border-radius: 20px;
         text-decoration: none;
         margin-bottom: 20px;
+        -webkit-backdrop-filter: blur(5px);
         backdrop-filter: blur(5px);
         transition: all 0.3s ease;
     }
@@ -262,12 +264,12 @@
 
 <div class="payments-container">
     <div class="container">
-        <a href="{% url 'patient_dashboard' %}" class="back-button">
-            <i class="fas fa-arrow-left"></i> Back to Dashboard
-        </a>
-
         <div class="row justify-content-center">
-            <div class="col-md-8">
+            <div class="col-md-10">
+                <a href="{% url 'patient_dashboard' %}" class="back-button">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                
                 <div class="payments-card">
                     <h2 class="section-title">Payment Summary</h2>
                     <div class="payment-method">

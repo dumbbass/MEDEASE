@@ -575,10 +575,12 @@ def download_prescription(request, prescription_id):
 def view_prescription(request, prescription_id):
     prescription = get_object_or_404(Prescription, id=prescription_id, patient__user=request.user)
     medications = prescription.medications.all()
+    user_profile = UserProfile.objects.get(user=request.user)
     
     context = {
         'prescription': prescription,
-        'medications': medications
+        'medications': medications,
+        'user_profile': user_profile
     }
     return render(request, 'myApp/prescription_detail.html', context)
 
@@ -667,7 +669,8 @@ def notifications(request):
     
     context = {
         'notifications': notifications,
-        'unread_count': notifications.filter(is_read=False).count()
+        'unread_count': notifications.filter(is_read=False).count(),
+        'user_profile': user_profile
     }
     return render(request, 'myApp/notifications.html', context)
 

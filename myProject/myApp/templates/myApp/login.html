@@ -1,4 +1,5 @@
 {% extends 'myApp/base.html' %}
+{% load static %}
 
 {% block content %}
 <style>
@@ -51,12 +52,13 @@
     }
 
     .login-logo {
-        width: 64px;
-        height: 64px;
+        width: 120px;
+        height: 120px;
         margin-bottom: 16px;
         display: block;
         margin-left: auto;
         margin-right: auto;
+        object-fit: contain;
     }
 
     .card-body {
@@ -140,7 +142,7 @@
 <div class="login-container">
     <div class="container">
         <div class="login-header">
-            <img src="https://via.placeholder.com/64" alt="MEDEASE Logo" class="login-logo">
+            <img src="/media/logo/logo.png" alt="MEDEASE Logo" class="login-logo">
             <h1>MEDEASE</h1>
             <p>Healthcare Management System</p>
         </div>

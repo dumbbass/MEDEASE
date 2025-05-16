@@ -1,4 +1,5 @@
 {% extends 'myApp/base.html' %}
+{% load static %}
 
 {% block content %}
 <style>
@@ -23,11 +24,17 @@
         padding: 24px 20px;
         text-align: center;
         border-bottom: 1px solid var(--neutral-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
     }
     
     .sidebar-logo {
-        height: 36px;
-        margin-bottom: 8px;
+        height: 40px;
+        width: 40px;
+        object-fit: contain;
+        margin-bottom: 0;
     }
     
     .sidebar-logo-text {
@@ -200,7 +207,7 @@
     /* Dashboard cards */
     .dashboard-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 24px;
         margin-bottom: 24px;
     }
@@ -211,6 +218,9 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         padding: 24px;
         transition: all 0.2s;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .dashboard-card:hover {
@@ -244,17 +254,27 @@
         font-size: 24px;
     }
     
+    .card-body {
+        flex: 1;
+    }
+    
+    .card-footer {
+        margin-top: auto;
+        padding-top: 16px;
+    }
+    
     /* Appointment section */
     .appointment-card {
         background-color: white;
         border-radius: 12px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         padding: 16px;
-        margin-bottom: 16px;
+        margin-bottom: 0;
         display: flex;
         align-items: center;
         gap: 16px;
         transition: all 0.2s;
+        min-height: 120px;
     }
     
     .appointment-card:hover {
@@ -277,23 +297,33 @@
     
     .appointment-info {
         flex: 1;
+        min-width: 0;
     }
     
     .appointment-date {
         font-size: 12px;
         color: var(--neutral-500);
         margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .appointment-doctor {
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .appointment-type {
         font-size: 14px;
         color: var(--neutral-600);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .appointment-status {
@@ -394,12 +424,58 @@
         font-size: 14px;
         font-weight: 500;
     }
+    
+    /* Quick Action Cards */
+    .quick-action-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        text-decoration: none;
+        color: var(--neutral-700);
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        color: var(--primary);
+        text-decoration: none;
+    }
+    
+    .quick-action-icon {
+        background-color: var(--primary-light);
+        height: 60px;
+        width: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+    }
+    
+    .quick-action-icon i {
+        font-size: 26px;
+        color: var(--primary);
+    }
+    
+    .quick-action-text {
+        font-size: 15px;
+        font-weight: 500;
+        text-align: center;
+    }
 </style>
 
 <div class="dashboard-container">
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">
+            <img src="/media/logo/logo.png" alt="MEDEASE" class="sidebar-logo">
             <div class="sidebar-logo-text">MEDEASE</div>
         </div>
         
@@ -470,8 +546,8 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <div class="welcome-text">
-                    <h1>Hello, {{ request.user.first_name }}</h1>
-                    <p>Welcome to your patient dashboard</p>
+                    <h1>Hello, {{ user_profile.full_name }}</h1>
+                    <p>Welcome to patient dashboard</p>
                 </div>
             </div>
             
@@ -515,23 +591,22 @@
                         <i class="fas fa-calendar-check"></i>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-3">
                     {% if appointments %}
-                        {% for appointment in appointments %}
+                        <!-- Show only the first appointment -->
                         <div class="appointment-card">
                             <div class="appointment-icon">
                                 <i class="fas fa-stethoscope"></i>
                             </div>
                             <div class="appointment-info">
-                                <div class="appointment-date">{{ appointment.appointment_date|date:"D, M d, Y" }} at {{ appointment.appointment_time }}</div>
-                                <div class="appointment-doctor">Dr. {{ appointment.doctor.user_profile.full_name }}</div>
-                                <div class="appointment-type">{{ appointment.reason }}</div>
+                                <div class="appointment-date">{{ appointments.0.appointment_date|date:"D, M d, Y" }} at {{ appointments.0.appointment_time }}</div>
+                                <div class="appointment-doctor">Dr. {{ appointments.0.doctor.user_profile.full_name }}</div>
+                                <div class="appointment-type">{{ appointments.0.reason }}</div>
                             </div>
                             <div class="appointment-status">
-                                <span class="status-badge status-{{ appointment.status|lower }}">{{ appointment.status }}</span>
+                                <span class="status-badge status-{{ appointments.0.status|lower }}">{{ appointments.0.status }}</span>
                             </div>
                         </div>
-                        {% endfor %}
                     {% else %}
                         <div class="text-center py-4">
                             <p class="text-muted">No upcoming appointments</p>
@@ -539,8 +614,8 @@
                         </div>
                     {% endif %}
                 </div>
-                <div class="card-footer bg-white border-0 text-end">
-                    <a href="{% url 'appointments_module' %}" class="text-primary">View All</a>
+                <div class="card-footer bg-white border-0 text-end pt-3">
+                    <a href="{% url 'appointments_module' %}" class="text-primary">View All {% if appointments.count > 1 %}<span class="badge bg-primary rounded-pill">{{ appointments.count }}</span>{% endif %}</a>
                 </div>
             </div>
             
@@ -551,17 +626,27 @@
                         <i class="fas fa-file-medical-alt"></i>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-3">
                     {% if recent_records %}
-                        <!-- Recent records content -->
+                        <!-- Show only the first medical record -->
+                        <div class="appointment-card">
+                            <div class="appointment-icon">
+                                <i class="fas fa-file-medical"></i>
+                            </div>
+                            <div class="appointment-info">
+                                <div class="appointment-date">{{ recent_records.0.date_created|date:"D, M d, Y" }}</div>
+                                <div class="appointment-doctor">{{ recent_records.0.title }}</div>
+                                <div class="appointment-type">{{ recent_records.0.get_record_type_display }}</div>
+                            </div>
+                        </div>
                     {% else %}
                         <div class="text-center py-4">
                             <p class="text-muted">No recent medical records</p>
                         </div>
                     {% endif %}
                 </div>
-                <div class="card-footer bg-white border-0 text-end">
-                    <a href="{% url 'medical_records' %}" class="text-primary">View All</a>
+                <div class="card-footer bg-white border-0 text-end pt-3">
+                    <a href="{% url 'medical_records' %}" class="text-primary">View All {% if recent_records.count > 1 %}<span class="badge bg-primary rounded-pill">{{ recent_records.count }}</span>{% endif %}</a>
                 </div>
             </div>
             
@@ -572,17 +657,32 @@
                         <i class="fas fa-credit-card"></i>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-3">
                     {% if payment_history %}
-                        <!-- Payment history content -->
+                        <!-- Show only the first payment -->
+                        <div class="appointment-card">
+                            <div class="appointment-icon">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div class="appointment-info">
+                                <div class="appointment-date">{{ payment_history.0.payment_date|date:"D, M d, Y" }}</div>
+                                <div class="appointment-doctor">${{ payment_history.0.amount }}</div>
+                                <div class="appointment-type">{{ payment_history.0.get_payment_method_display }}</div>
+                            </div>
+                            <div class="appointment-status">
+                                <span class="status-badge {% if payment_history.0.status == 'COMPLETED' %}status-confirmed{% else %}status-pending{% endif %}">
+                                    {{ payment_history.0.status }}
+                                </span>
+                            </div>
+                        </div>
                     {% else %}
                         <div class="text-center py-4">
                             <p class="text-muted">No recent payment history</p>
                         </div>
                     {% endif %}
                 </div>
-                <div class="card-footer bg-white border-0 text-end">
-                    <a href="{% url 'payments' %}" class="text-primary">View All</a>
+                <div class="card-footer bg-white border-0 text-end pt-3">
+                    <a href="{% url 'payments' %}" class="text-primary">View All {% if payment_history.count > 1 %}<span class="badge bg-primary rounded-pill">{{ payment_history.count }}</span>{% endif %}</a>
                 </div>
             </div>
         </div>
@@ -595,27 +695,35 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-6 col-md-3">
-                        <a href="{% url 'book_appointment' %}" class="btn btn-light w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                            <i class="fas fa-calendar-plus mb-2 text-primary" style="font-size: 24px;"></i>
-                            <span>Book Appointment</span>
+                        <a href="{% url 'book_appointment' %}" class="quick-action-card">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-calendar-plus"></i>
+                            </div>
+                            <div class="quick-action-text">Book Appointment</div>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{% url 'find_doctor' %}" class="btn btn-light w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                            <i class="fas fa-user-md mb-2 text-primary" style="font-size: 24px;"></i>
-                            <span>Find Doctor</span>
+                        <a href="{% url 'find_doctor' %}" class="quick-action-card">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="quick-action-text">Find Doctor</div>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{% url 'medical_records' %}" class="btn btn-light w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                            <i class="fas fa-file-medical mb-2 text-primary" style="font-size: 24px;"></i>
-                            <span>View Records</span>
+                        <a href="{% url 'medical_records' %}" class="quick-action-card">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-file-medical"></i>
+                            </div>
+                            <div class="quick-action-text">View Records</div>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{% url 'patient_payments' %}" class="btn btn-light w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                            <i class="fas fa-credit-card mb-2 text-primary" style="font-size: 24px;"></i>
-                            <span>Make Payment</span>
+                        <a href="{% url 'patient_payments' %}" class="quick-action-card">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="quick-action-text">Make Payment</div>
                         </a>
                     </div>
                 </div>

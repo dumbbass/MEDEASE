@@ -10,6 +10,16 @@
         <a href="{% url 'prescriptions' %}" class="back-button">
             <i class="fas fa-arrow-left"></i> Back to Prescriptions
         </a>
+        
+        {% if user_profile.user_type == 'DOCTOR' %}
+        <a href="{% url 'doctor_dashboard' %}" class="back-button">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+        {% else %}
+        <a href="{% url 'patient_dashboard' %}" class="back-button">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+        {% endif %}
 
         <div class="row justify-content-center">
             <div class="col-md-8">
