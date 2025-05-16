@@ -429,6 +429,15 @@ def book_appointment(request):
                 f'Your appointment with Dr. {doctor.user_profile.full_name} has been scheduled for {appointment_date} at {appointment_time}.',
                 f'/appointments/{appointment.id}/'
             )
+            
+            # Create notification for the doctor
+            create_notification(
+                doctor.user_profile,
+                'APPOINTMENT',
+                'New Appointment Request',
+                f'Patient {user_profile.full_name} has requested an appointment for {appointment_date} at {appointment_time}.',
+                f'/appointments/{appointment.id}/'
+            )
 
             messages.success(request, 'Appointment booked successfully!')
             return redirect('patient_dashboard')
